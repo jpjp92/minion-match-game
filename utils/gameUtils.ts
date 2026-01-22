@@ -7,20 +7,20 @@ import { Card, Difficulty } from "../types.ts";
  */
 export const fetchAvailableImages = async (): Promise<string[]> => {
   const REPO_OWNER = 'jpjp92';
-  const REPO_NAME = 'minion-match';
+  const REPO_NAME = 'minion-match-game';
   const PATH = 'public/images';
-  
+
   try {
     const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PATH}?t=${Date.now()}`);
-    
+
     if (!response.ok) throw new Error('GitHub API response was not ok');
-    
+
     const data = await response.json();
-    
+
     // 더 안정적인 Raw URL 구조로 직접 생성
     const imageUrls = data
-      .filter((file: any) => 
-        file.type === 'file' && 
+      .filter((file: any) =>
+        file.type === 'file' &&
         /\.(jpe?g|png|webp|gif)$/i.test(file.name)
       )
       .map((file: any) => `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/${file.name}`);
@@ -32,14 +32,14 @@ export const fetchAvailableImages = async (): Promise<string[]> => {
     console.error("Error fetching images from GitHub API:", error);
     // API 실패 시 폴백 (일부 기본 이미지 경로)
     return [
-      'https://raw.githubusercontent.com/jpjp92/minion-match/main/public/images/2.jpg',
-      'https://raw.githubusercontent.com/jpjp92/minion-match/main/public/images/3.jpg',
-      'https://raw.githubusercontent.com/jpjp92/minion-match/main/public/images/4.jpg',
-      'https://raw.githubusercontent.com/jpjp92/minion-match/main/public/images/5.jpg',
-      'https://raw.githubusercontent.com/jpjp92/minion-match/main/public/images/6.jpg',
-      'https://raw.githubusercontent.com/jpjp92/minion-match/main/public/images/7.jpg',
-      'https://raw.githubusercontent.com/jpjp92/minion-match/main/public/images/8.jpg',
-      'https://raw.githubusercontent.com/jpjp92/minion-match/main/public/images/9.jpg'
+      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/2.jpg`,
+      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/3.jpg`,
+      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/4.jpg`,
+      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/5.jpg`,
+      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/6.jpg`,
+      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/7.jpg`,
+      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/8.jpg`,
+      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/9.jpg`
     ];
   }
 };
@@ -62,7 +62,7 @@ export const preloadImages = (images: string[]): Promise<void[]> => {
         };
         img.onerror = () => {
           console.warn(`Failed to preload: ${src}`);
-          resolve(); 
+          resolve();
         };
       });
     })
@@ -70,16 +70,16 @@ export const preloadImages = (images: string[]): Promise<void[]> => {
 };
 
 export const createBoard = (difficulty: Difficulty, imagePool: string[]): Card[] => {
-  let pairCount = 6; 
+  let pairCount = 6;
   if (difficulty === Difficulty.MEDIUM) pairCount = 8;
 
   const shuffledPool = shuffle([...imagePool]);
   const selectedImages = [];
-  
+
   for (let i = 0; i < pairCount; i++) {
     selectedImages.push(shuffledPool[i % shuffledPool.length]);
   }
-  
+
   const cards: Card[] = [];
   selectedImages.forEach((imgUrl, index) => {
     const cardData = {
