@@ -432,8 +432,13 @@ const App: React.FC = () => {
                 </table>
               </div>
             </div>
-            <div className="p-6 bg-white border-t border-gray-100">
-              <button onClick={() => setIsLeaderboardOpen(false)} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl active:scale-[0.98] transition-all text-sm uppercase shadow-xl shadow-blue-600/20">Back to Game</button>
+            <div className="p-4 sm:p-6 bg-white border-t border-gray-100 flex justify-center">
+              <button
+                onClick={() => setIsLeaderboardOpen(false)}
+                className="w-full max-w-[240px] py-3 bg-blue-600 text-white font-black rounded-xl active:scale-[0.98] transition-all text-xs sm:text-sm uppercase shadow-xl shadow-blue-600/20"
+              >
+                Back to Game
+              </button>
             </div>
           </div>
         </div>
