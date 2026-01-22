@@ -9,7 +9,7 @@ const App: React.FC = () => {
   const [isLoadingPool, setIsLoadingPool] = useState(true);
   const [isGameLoading, setIsGameLoading] = useState(false);
   const [previewTimer, setPreviewTimer] = useState(5);
-  
+
   const [gameState, setGameState] = useState<GameState>({
     cards: [],
     flippedIndices: [],
@@ -67,7 +67,7 @@ const App: React.FC = () => {
       difficulty,
       bestScore: Number(localStorage.getItem(`bestScore_${difficulty}`)) || 0
     });
-    
+
     setPreviewTimer(5);
     setIsGameLoading(false);
 
@@ -85,10 +85,10 @@ const App: React.FC = () => {
 
   const handleCardClick = useCallback((index: number) => {
     if (isProcessing || gameState.status !== 'PLAYING') return;
-    
+
     setGameState(prev => {
       if (prev.cards[index].isFlipped || prev.cards[index].isMatched) return prev;
-      
+
       const updatedCards = [...prev.cards];
       updatedCards[index] = { ...updatedCards[index], isFlipped: true };
       const newFlipped = [...prev.flippedIndices, index];
@@ -109,7 +109,7 @@ const App: React.FC = () => {
               const totalPairs = current.cards.length / 2;
               const hasWon = nextMatches === totalPairs;
               if (hasWon && timerRef.current) clearInterval(timerRef.current);
-              
+
               setIsProcessing(false);
               return {
                 ...current,
@@ -120,7 +120,7 @@ const App: React.FC = () => {
                 bestScore: hasWon ? updateBestScore(nextMoves, current.difficulty) : current.bestScore
               };
             });
-          }, 310); 
+          }, 310);
         } else {
           setTimeout(() => {
             setGameState(current => {
@@ -149,13 +149,13 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    return () => { 
+    return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (previewIntervalRef.current) clearInterval(previewIntervalRef.current);
     };
   }, []);
 
-  const saveToLeaderboard = () => {
+  const saveToLeaderboard = useCallback(() => {
     if (!playerName.trim()) return;
     const newEntry: LeaderboardEntry = {
       id: Date.now().toString(),
@@ -166,14 +166,22 @@ const App: React.FC = () => {
       date: new Date().toLocaleDateString()
     };
     const updated = [...leaderboard, newEntry]
-      .sort((a, b) => a.moves !== b.moves ? a.moves - b.moves : a.time - b.time)
+      .sort((a, b) => (a.moves !== b.moves ? a.moves - b.moves : a.time - b.time))
       .slice(0, 10);
     setLeaderboard(updated);
     localStorage.setItem('minion_leaderboard', JSON.stringify(updated));
     setGameState(prev => ({ ...prev, status: 'IDLE' }));
     setIsLeaderboardOpen(true);
-    setPlayerName('');
-  };
+  }, [playerName, gameState.moves, gameState.difficulty, timer, leaderboard]);
+
+  useEffect(() => {
+    if (gameState.status === 'WON' && playerName.trim()) {
+      const timeout = setTimeout(() => {
+        saveToLeaderboard();
+      }, 700); // 0.7초 정도 성공 화면을 보여준 뒤 자동 저장
+      return () => clearTimeout(timeout);
+    }
+  }, [gameState.status, playerName, saveToLeaderboard]);
 
   if (isLoadingPool) {
     return (
@@ -204,10 +212,10 @@ const App: React.FC = () => {
           <div className="grid grid-cols-4 gap-1 sm:gap-2 bg-black/40 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 border border-white/10 w-full sm:w-auto">
             {[
               { label: 'Moves', value: gameState.moves, color: 'text-white' },
-              { 
-                label: gameState.status === 'PREVIEW' ? 'Wait' : 'Time', 
-                value: gameState.status === 'PREVIEW' ? `${previewTimer}s` : `${Math.floor(timer/60)}:${(timer%60).toString().padStart(2,'0')}`, 
-                color: gameState.status === 'PREVIEW' ? 'text-orange-400' : 'text-blue-400' 
+              {
+                label: gameState.status === 'PREVIEW' ? 'Wait' : 'Time',
+                value: gameState.status === 'PREVIEW' ? `${previewTimer}s` : `${Math.floor(timer / 60)}:${(timer % 60).toString().padStart(2, '0')}`,
+                color: gameState.status === 'PREVIEW' ? 'text-orange-400' : 'text-blue-400'
               },
               { label: 'Pairs', value: `${gameState.matches}/${actualTotalPairs || 0}`, color: 'text-yellow-400' },
               { label: 'Best', value: gameState.bestScore === 0 ? '--' : gameState.bestScore, color: 'text-purple-400' }
@@ -224,28 +232,39 @@ const App: React.FC = () => {
           <section className="order-2 lg:order-1 relative">
             {gameState.status === 'IDLE' || isGameLoading ? (
               <div className="min-h-[350px] sm:min-h-[550px] flex flex-col items-center justify-center space-y-4 sm:space-y-6 bg-white/[0.02] rounded-[2rem] sm:rounded-[2.5rem] border-2 border-dashed border-white/10 p-4 sm:p-6">
-                 {isGameLoading ? (
-                   <>
-                     <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-                     <p className="font-fredoka text-base sm:text-lg font-bold text-yellow-400 animate-pulse">Preloading Bananas...</p>
-                   </>
-                 ) : (
-                   <>
-                     <span className="text-5xl sm:text-7xl animate-bounce">🍌</span>
-                     <h2 className="text-lg sm:text-2xl font-bold font-fredoka text-white text-center">Ready for your mission?</h2>
-                     <div className="flex flex-col sm:flex-row justify-center gap-3 w-full max-w-sm">
-                        {(['EASY', 'MEDIUM'] as Difficulty[]).map(d => (
-                          <button 
-                            key={d} 
-                            onClick={() => initGame(d)} 
-                            className="flex-1 py-3 sm:py-4 bg-yellow-400 text-black rounded-xl sm:rounded-2xl font-black text-base sm:text-lg hover:scale-105 transition-all active:scale-95 shadow-xl shadow-yellow-400/20"
-                          >
-                            {d}
-                          </button>
-                        ))}
-                     </div>
-                   </>
-                 )}
+                {isGameLoading ? (
+                  <>
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="font-fredoka text-base sm:text-lg font-bold text-yellow-400 animate-pulse">Preloading Bananas...</p>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-5xl sm:text-7xl animate-bounce">🍌</span>
+                    <h2 className="text-lg sm:text-2xl font-bold font-fredoka text-white text-center">Ready for your mission?</h2>
+                    <div className="w-full max-w-xs space-y-2 mb-2">
+                      <p className="text-[10px] text-gray-500 uppercase font-black text-center tracking-widest italic">Agent Identifier Required</p>
+                      <input
+                        type="text"
+                        placeholder="Enter Agent Name..."
+                        value={playerName}
+                        onChange={(e) => setPlayerName(e.target.value)}
+                        maxLength={12}
+                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-400 transition-colors text-center font-bold text-sm"
+                      />
+                    </div>
+                    <div className="flex flex-col sm:flex-row justify-center gap-3 w-full max-w-sm">
+                      {(['EASY', 'MEDIUM'] as Difficulty[]).map(d => (
+                        <button
+                          key={d}
+                          onClick={() => initGame(d)}
+                          className="flex-1 py-3 sm:py-4 bg-yellow-400 text-black rounded-xl sm:rounded-2xl font-black text-base sm:text-lg hover:scale-105 transition-all active:scale-95 shadow-xl shadow-yellow-400/20"
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-2 sm:gap-4">
@@ -265,11 +284,11 @@ const App: React.FC = () => {
                   {/* 웹에서도 카드가 큼직하게 보이도록 max-w를 상향 조정하고 EASY/MEDIUM 너비를 통일하여 카드 크기 일치시킴 */}
                   <div className={`grid grid-cols-4 gap-2 sm:gap-4 w-full mx-auto justify-items-center max-w-full sm:max-w-[600px]`}>
                     {gameState.cards.map((card, idx) => (
-                      <Card 
-                        key={card.id} 
-                        card={card} 
-                        onClick={() => handleCardClick(idx)} 
-                        disabled={isProcessing || gameState.status === 'PREVIEW'} 
+                      <Card
+                        key={card.id}
+                        card={card}
+                        onClick={() => handleCardClick(idx)}
+                        disabled={isProcessing || gameState.status === 'PREVIEW'}
                         isPreviewing={gameState.status === 'PREVIEW'}
                       />
                     ))}
@@ -280,57 +299,91 @@ const App: React.FC = () => {
           </section>
 
           <aside className="order-1 lg:order-2 flex flex-col gap-3 sm:gap-5">
-             <div className="bg-white/5 backdrop-blur-3xl p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/10 shadow-2xl space-y-3 sm:space-y-5">
-                <div className="flex items-center gap-3">
-                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                   </div>
-                   <h3 className="font-fredoka text-sm sm:text-base font-bold text-blue-400 uppercase tracking-tight">Mission Panel</h3>
+            <div className="bg-white/5 backdrop-blur-3xl p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/10 shadow-2xl space-y-3 sm:space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
+                <h3 className="font-fredoka text-sm sm:text-base font-bold text-blue-400 uppercase tracking-tight">Mission Panel</h3>
+              </div>
 
-                <div className="flex flex-col gap-2 sm:gap-3">
-                   <button onClick={() => initGame(gameState.difficulty)} className="py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-500 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-all active:scale-95 shadow-lg shadow-blue-600/20">Restart Mission</button>
-                   <button onClick={() => setIsLeaderboardOpen(true)} className="py-2.5 sm:py-3 bg-yellow-400 hover:bg-yellow-300 text-black rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-all active:scale-95 shadow-lg shadow-yellow-400/10">🏆 Leaderboard</button>
-                   <button onClick={() => setGameState(prev => ({ ...prev, status: 'IDLE' }))} className="py-2.5 sm:py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg sm:rounded-xl font-bold text-gray-400 text-[9px] sm:text-[10px] transition-all">Back to Menu</button>
-                </div>
+              <div className="bg-black/40 rounded-xl p-2 border border-white/5 space-y-1 mt-1">
+                <p className="text-[7px] text-gray-500 uppercase font-black tracking-widest text-center">Active Agent</p>
+                <input
+                  type="text"
+                  placeholder="Set Name..."
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
+                  maxLength={12}
+                  className="w-full bg-transparent text-center font-bold text-[11px] text-yellow-400 focus:outline-none placeholder:text-gray-700"
+                />
+              </div>
 
-                <div className="pt-3 sm:pt-5 border-t border-white/10">
-                   <p className="text-[7px] sm:text-[8px] text-gray-500 uppercase font-black mb-2 sm:mb-3 text-center tracking-widest">Difficulty</p>
-                   <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/40 rounded-lg sm:rounded-xl">
-                     {([Difficulty.EASY, Difficulty.MEDIUM] as Difficulty[]).map(d => (
-                       <button key={d} onClick={() => initGame(d)} className={`py-1.5 sm:py-2 text-[8px] sm:text-[9px] font-black rounded-md sm:rounded-lg transition-all ${gameState.difficulty === d ? 'bg-yellow-400 text-black shadow-md' : 'text-gray-500 hover:text-white'}`}>{d}</button>
-                     ))}
-                   </div>
+              <div className="flex flex-col gap-2 sm:gap-3">
+                <button onClick={() => initGame(gameState.difficulty)} className="py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-500 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-all active:scale-95 shadow-lg shadow-blue-600/20">Restart Mission</button>
+                <button onClick={() => setIsLeaderboardOpen(true)} className="py-2.5 sm:py-3 bg-yellow-400 hover:bg-yellow-300 text-black rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-all active:scale-95 shadow-lg shadow-yellow-400/10">🏆 Leaderboard</button>
+                <button onClick={() => setGameState(prev => ({ ...prev, status: 'IDLE' }))} className="py-2.5 sm:py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg sm:rounded-xl font-bold text-gray-400 text-[9px] sm:text-[10px] transition-all">Back to Menu</button>
+              </div>
+
+              <div className="pt-3 sm:pt-5 border-t border-white/10">
+                <p className="text-[7px] sm:text-[8px] text-gray-500 uppercase font-black mb-2 sm:mb-3 text-center tracking-widest">Difficulty</p>
+                <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/40 rounded-lg sm:rounded-xl">
+                  {([Difficulty.EASY, Difficulty.MEDIUM] as Difficulty[]).map(d => (
+                    <button key={d} onClick={() => initGame(d)} className={`py-1.5 sm:py-2 text-[8px] sm:text-[9px] font-black rounded-md sm:rounded-lg transition-all ${gameState.difficulty === d ? 'bg-yellow-400 text-black shadow-md' : 'text-gray-500 hover:text-white'}`}>{d}</button>
+                  ))}
                 </div>
-             </div>
+              </div>
+            </div>
           </aside>
         </div>
       </main>
 
-      {/* WIN MODAL */}
-      {gameState.status === 'WON' && (
+      {/* WIN MODAL: Only shows when name is NOT set */}
+      {gameState.status === 'WON' && !playerName.trim() && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
           <div className="bg-yellow-400 p-1 rounded-[2.5rem] shadow-2xl max-w-[340px] w-full animate-scaleIn">
             <div className="bg-[#050a0f] rounded-[2.35rem] p-8 flex flex-col items-center text-center space-y-6">
               <span className="text-6xl animate-bounce">🏆</span>
               <div>
                 <h2 className="text-2xl sm:text-3xl font-fredoka font-bold text-yellow-400 uppercase tracking-tight">Banana Success!</h2>
-                <p className="text-gray-400 text-sm mt-2">Moves: <span className="text-white font-bold">{gameState.moves}</span> | Time: <span className="text-white font-bold">{Math.floor(timer/60)}:{(timer%60).toString().padStart(2,'0')}</span></p>
+                <p className="text-gray-400 text-sm mt-2">Moves: <span className="text-white font-bold">{gameState.moves}</span> | Time: <span className="text-white font-bold">{Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}</span></p>
               </div>
               <div className="w-full space-y-3">
-                <input 
-                  type="text" 
-                  placeholder="Enter Agent Name..." 
-                  value={playerName} 
-                  onChange={(e) => setPlayerName(e.target.value)} 
+                <input
+                  type="text"
+                  placeholder="Enter Agent Name..."
+                  value={playerName}
+                  onChange={(e) => setPlayerName(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') saveToLeaderboard(); }}
-                  maxLength={12} 
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-400 transition-colors text-center font-bold text-sm" 
+                  maxLength={12}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-400 transition-colors text-center font-bold text-sm"
                   autoFocus
                 />
-                <button onClick={saveToLeaderboard} disabled={!playerName.trim()} className="w-full py-4 bg-yellow-400 text-black font-black text-base rounded-xl active:scale-95 transition-all shadow-lg shadow-yellow-400/20 disabled:opacity-50 uppercase">SAVE RECORD</button>
+                <button
+                  onClick={saveToLeaderboard}
+                  disabled={!playerName.trim()}
+                  className="w-full py-4 bg-yellow-400 text-black font-black text-base rounded-xl active:scale-95 transition-all shadow-lg shadow-yellow-400/20 disabled:opacity-50 uppercase"
+                >
+                  SAVE RECORD
+                </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* AUTO SAVING OVERLAY: Only shows when name IS ALREADY set */}
+      {gameState.status === 'WON' && playerName.trim() && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#050a0f]/80 backdrop-blur-md animate-fadeIn transition-all">
+          <div className="scale-150 mb-8 animate-bounce">🏆</div>
+          <h2 className="text-4xl sm:text-5xl font-fredoka font-bold text-yellow-400 uppercase tracking-tighter animate-pulse text-center px-4">Mission Accomplished!</h2>
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <p className="text-gray-400 text-sm uppercase tracking-widest font-black">Agent identified</p>
+            <p className="text-white text-3xl font-black">{playerName}</p>
+          </div>
+          <div className="mt-12 flex items-center gap-3">
+            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
+            <p className="text-yellow-400/80 font-bold tracking-widest text-[10px] sm:text-xs uppercase">Uploading Record into Hall of Fame...</p>
           </div>
         </div>
       )}
@@ -340,44 +393,44 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-xl overflow-hidden animate-scaleIn flex flex-col max-h-[90vh]">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white">
-               <h2 className="text-xl sm:text-2xl font-fredoka font-bold text-blue-600 flex items-center gap-3">🏆 HALL OF FAME</h2>
-               <button onClick={() => setIsLeaderboardOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
-                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-               </button>
+              <h2 className="text-xl sm:text-2xl font-fredoka font-bold text-blue-600 flex items-center gap-3">🏆 HALL OF FAME</h2>
+              <button onClick={() => setIsLeaderboardOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-white text-gray-800">
-                <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[320px]">
-                    <thead>
-                      <tr className="bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest">
-                        <th className="px-4 py-4 text-center">RANK</th>
-                        <th className="px-4 py-4">PLAYER</th>
-                        <th className="px-4 py-4 text-center">MOVES</th>
-                        <th className="px-4 py-4 text-center">MODE</th>
-                        <th className="px-4 py-4 text-center">TIME</th>
+              <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[320px]">
+                  <thead>
+                    <tr className="bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest">
+                      <th className="px-4 py-4 text-center">RANK</th>
+                      <th className="px-4 py-4">PLAYER</th>
+                      <th className="px-4 py-4 text-center">MOVES</th>
+                      <th className="px-4 py-4 text-center">MODE</th>
+                      <th className="px-4 py-4 text-center">TIME</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {leaderboard.length > 0 ? leaderboard.map((entry, index) => (
+                      <tr key={entry.id} className={`${index < 3 ? 'bg-yellow-50/50' : 'bg-white'} hover:bg-gray-50 transition-colors text-sm sm:text-base`}>
+                        <td className="px-4 py-4 text-center font-bold text-blue-600">
+                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                        </td>
+                        <td className="px-4 py-4 font-bold text-gray-700 truncate max-w-[100px]">{entry.name}</td>
+                        <td className="px-4 py-4 text-center font-black text-blue-700">{entry.moves}</td>
+                        <td className="px-4 py-4 text-center">
+                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${entry.difficulty === Difficulty.MEDIUM ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
+                            {entry.difficulty.charAt(0)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center text-gray-500 text-xs font-semibold">{entry.time}s</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {leaderboard.length > 0 ? leaderboard.map((entry, index) => (
-                        <tr key={entry.id} className={`${index < 3 ? 'bg-yellow-50/50' : 'bg-white'} hover:bg-gray-50 transition-colors text-sm sm:text-base`}>
-                          <td className="px-4 py-4 text-center font-bold text-blue-600">
-                            {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
-                          </td>
-                          <td className="px-4 py-4 font-bold text-gray-700 truncate max-w-[100px]">{entry.name}</td>
-                          <td className="px-4 py-4 text-center font-black text-blue-700">{entry.moves}</td>
-                          <td className="px-4 py-4 text-center">
-                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${entry.difficulty === Difficulty.MEDIUM ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-                              {entry.difficulty.charAt(0)}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 text-center text-gray-500 text-xs font-semibold">{entry.time}s</td>
-                        </tr>
-                      )) : (
-                        <tr><td colSpan={5} className="py-16 text-center text-gray-400 font-bold text-base">No records yet. 🍌</td></tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                    )) : (
+                      <tr><td colSpan={5} className="py-16 text-center text-gray-400 font-bold text-base">No records yet. 🍌</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
             <div className="p-6 bg-white border-t border-gray-100">
               <button onClick={() => setIsLeaderboardOpen(false)} className="w-full py-4 bg-blue-600 text-white font-black rounded-xl active:scale-[0.98] transition-all text-sm uppercase shadow-xl shadow-blue-600/20">Back to Game</button>
