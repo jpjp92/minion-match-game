@@ -22,6 +22,7 @@ const App: React.FC = () => {
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLeaderboardOpen, setIsLeaderboardOpen] = useState(false);
+  const [leaderboardTab, setLeaderboardTab] = useState<Difficulty>(Difficulty.EASY);
   const [playerName, setPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -165,11 +166,14 @@ const App: React.FC = () => {
       difficulty: gameState.difficulty,
       date: new Date().toLocaleDateString()
     };
+
+    // 전체 기록 업데이트 (정렬은 렌더링 시 처리하거나 저장 시 처리)
     const updated = [...leaderboard, newEntry]
-      .sort((a, b) => (a.moves !== b.moves ? a.moves - b.moves : a.time - b.time))
-      .slice(0, 10);
+      .sort((a, b) => (a.moves !== b.moves ? a.moves - b.moves : a.time - b.time));
+
     setLeaderboard(updated);
     localStorage.setItem('minion_leaderboard', JSON.stringify(updated));
+    setLeaderboardTab(gameState.difficulty); // 방금 플레이한 난이도 탭 활성화
     setGameState(prev => ({ ...prev, status: 'IDLE' }));
     setIsLeaderboardOpen(true);
   }, [playerName, gameState.moves, gameState.difficulty, timer, leaderboard]);
@@ -399,6 +403,18 @@ const App: React.FC = () => {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-white text-gray-800">
+              <div className="mb-6 flex p-1 bg-gray-100 rounded-2xl w-full max-w-sm mx-auto border border-gray-200 shadow-inner">
+                {(['EASY', 'MEDIUM'] as Difficulty[]).map(d => (
+                  <button
+                    key={d}
+                    onClick={() => setLeaderboardTab(d)}
+                    className={`flex-1 py-2.5 rounded-xl font-fredoka font-bold text-[11px] sm:text-xs tracking-widest transition-all ${leaderboardTab === d ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                  >
+                    {d} MODE
+                  </button>
+                ))}
+              </div>
+
               <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[320px]">
                   <thead>
@@ -406,28 +422,29 @@ const App: React.FC = () => {
                       <th className="px-4 py-4 text-center">RANK</th>
                       <th className="px-4 py-4">PLAYER</th>
                       <th className="px-4 py-4 text-center">MOVES</th>
-                      <th className="px-4 py-4 text-center">MODE</th>
                       <th className="px-4 py-4 text-center">TIME</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {leaderboard.length > 0 ? leaderboard.map((entry, index) => (
-                      <tr key={entry.id} className={`${index < 3 ? 'bg-yellow-50/50' : 'bg-white'} hover:bg-gray-50 transition-colors text-sm sm:text-base`}>
-                        <td className="px-4 py-4 text-center font-bold text-blue-600">
-                          {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
-                        </td>
-                        <td className="px-4 py-4 font-bold text-gray-700 truncate max-w-[100px]">{entry.name}</td>
-                        <td className="px-4 py-4 text-center font-black text-blue-700">{entry.moves}</td>
-                        <td className="px-4 py-4 text-center">
-                          <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${entry.difficulty === Difficulty.MEDIUM ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'}`}>
-                            {entry.difficulty.charAt(0)}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-center text-gray-500 text-xs font-semibold">{entry.time}s</td>
-                      </tr>
-                    )) : (
-                      <tr><td colSpan={5} className="py-16 text-center text-gray-400 font-bold text-base">No records yet. 🍌</td></tr>
-                    )}
+                    {leaderboard
+                      .filter(entry => entry.difficulty === leaderboardTab)
+                      .slice(0, 10)
+                      .length > 0 ?
+                      leaderboard
+                        .filter(entry => entry.difficulty === leaderboardTab)
+                        .slice(0, 10)
+                        .map((entry, index) => (
+                          <tr key={entry.id} className={`${index < 3 ? 'bg-yellow-50/50' : 'bg-white'} hover:bg-gray-50 transition-colors text-sm sm:text-base`}>
+                            <td className="px-4 py-4 text-center font-bold text-blue-600">
+                              {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
+                            </td>
+                            <td className="px-4 py-4 font-bold text-gray-700 truncate max-w-[100px]">{entry.name}</td>
+                            <td className="px-4 py-4 text-center font-black text-blue-700">{entry.moves}</td>
+                            <td className="px-4 py-4 text-center text-gray-500 text-xs font-semibold">{entry.time}s</td>
+                          </tr>
+                        )) : (
+                        <tr><td colSpan={4} className="py-16 text-center text-gray-400 font-bold text-base uppercase">No {leaderboardTab} records. 🍌</td></tr>
+                      )}
                   </tbody>
                 </table>
               </div>

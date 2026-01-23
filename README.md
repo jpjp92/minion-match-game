@@ -1,21 +1,59 @@
+# 🍌 Minion Match-Game: Classic Edition 🏆
 
-# 🍌 Minion Match: Classic Edition
+**Minion Match-Game** is a high-performance memory matching game featuring the beloved Minions. It offers a sophisticated UI, smooth animations, and a seamless user experience designed for ultimate fun.
 
-고성능 미니언즈 메모리 게임입니다. 직관적인 UI와 빠른 반응 속도로 미니언즈 카드 쌍을 맞춰보세요!
+![Banner](https://raw.githubusercontent.com/jpjp92/minion-match-game/main/public/images/27.jpg)
 
-## 🚀 게임 특징
-1.  **Mission Selection**: EASY, MEDIUM, HARD 난이도 선택 가능.
-2.  **Smooth Animation**: 3D CSS 트랜스폼을 활용한 부드러운 카드 뒤집기 애니메이션.
-3.  **Real-time Scoring**: 이동 횟수(Moves)와 시간(Time) 실시간 측정.
-4.  **Local Storage**: 난이도별 최고 기록(Best Score) 저장 기능.
+## 🌟 Key Features
 
-## 🛠 기술 스택
-*   **Frontend**: React 19, Tailwind CSS
-*   **Animations**: Custom CSS 3D Animations
-*   **Design**: Glassmorphism & High-fidelity UI
+1. **Smart Session Management** 🆔
+   - Enter your nickname once and play as much as you want! Your identity is remembered during the session.
+   - Starting from your second game, scores are **automatically saved** and linked to the Hall of Fame without extra typing.
+   - Resets only when you refresh the page, keeping the flow fast and uninterrupted.
 
-## 📁 이미지 리소스
-모든 미니언 이미지는 `public/images` 폴더에 위치해야 하며, 파일명은 `1.jpg`, `2.jpg`, ... 형식이어야 합니다.
+2. **Dynamic Missions (Difficulty)** ⚡
+   - **EASY**: 6 pairs of Minions (12 cards) - Perfect for a quick warm-up.
+   - **MEDIUM**: 8 pairs of Minions (16 cards) - Requires extra focus and memory.
+
+3. **Premium Visual Experience** ✨
+   - **3D Flip Animation**: Realistic card-flipping effects powered by CSS 3D transforms.
+   - **Glassmorphism UI**: A modern, sleek design system for a premium look and feel.
+   - **Preview Mode**: A 5-second "Memorize" phase before each game to test your brain power.
+
+4. **Real-time Hall of Fame** 🥇
+   - Competitive leaderboard tracking the best scores based on total moves and time elapsed.
+
+## 🛠 Tech Stack
+
+- **Frontend**: `React 19`, `TypeScript`
+- **Styling**: `Tailwind CSS`, `Custom CSS Keyframes`
+- **Bundler**: `Vite`
+- **Assets**: Dynamic image loading via GitHub API
+
+## 🎮 How to Play
+
+1. Enter your Agent Name on the main screen.
+2. Select your mission difficulty (**EASY** or **MEDIUM**).
+3. Memorize the cards during the 5-second preview.
+4. Click cards to find matching pairs of Minions.
+5. Once the mission is complete, your score is automatically uploaded to the **Hall of Fame**.
+
+## 📦 Installation & Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/jpjp92/minion-match-game.git
+
+# Install dependencies
+npm install
+
+# Run the local development server
+npm run dev
+```
 
 ---
-**"Bello! Enjoy your Banana Party!"** 🍌
+
+**"Bello! Ba-na-naaaaaa! 🍌 Good luck on your mission, Agent!"**
+
+---
+© 2026 Minion Match Team. All Rights Reserved.
