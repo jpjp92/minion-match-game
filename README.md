@@ -13,7 +13,7 @@
 
 2. **Dynamic Missions (Difficulty)** ⚡
    - **EASY**: 6 pairs of Minions (12 cards) - Perfect for a quick warm-up.
-   - **MEDIUM**: 8 pairs of Minions (16 cards) - Requires extra focus and memory.
+   - **NORMAL**: 8 pairs of Minions (16 cards) - Requires extra focus and memory.
 
 3. **Premium Visual Experience** ✨
    - **3D Flip Animation**: Realistic card-flipping effects powered by CSS 3D transforms.
@@ -33,7 +33,7 @@
 ## 🎮 How to Play
 
 1. Enter your Agent Name on the main screen.
-2. Select your mission difficulty (**EASY** or **MEDIUM**).
+2. Select your mission difficulty (**EASY** or **NORMAL**).
 3. Memorize the cards during the 5-second preview.
 4. Click cards to find matching pairs of Minions.
 5. Once the mission is complete, your score is automatically uploaded to the **Hall of Fame**.

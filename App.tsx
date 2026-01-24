@@ -257,7 +257,7 @@ const App: React.FC = () => {
                       />
                     </div>
                     <div className="flex flex-col sm:flex-row justify-center gap-3 w-full max-w-sm">
-                      {(['EASY', 'MEDIUM'] as Difficulty[]).map(d => (
+                      {(['EASY', 'NORMAL'] as Difficulty[]).map(d => (
                         <button
                           key={d}
                           onClick={() => initGame(d)}
@@ -285,7 +285,7 @@ const App: React.FC = () => {
                 )}
 
                 <div className="bg-white/[0.02] p-2 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-2xl flex items-center justify-center min-h-[350px] sm:min-h-[550px] relative overflow-hidden">
-                  {/* 웹에서도 카드가 큼직하게 보이도록 max-w를 상향 조정하고 EASY/MEDIUM 너비를 통일하여 카드 크기 일치시킴 */}
+                  {/* 웹에서도 카드가 큼직하게 보이도록 max-w를 상향 조정하고 EASY/NORMAL 너비를 통일하여 카드 크기 일치시킴 */}
                   <div className={`grid grid-cols-4 gap-2 sm:gap-4 w-full mx-auto justify-items-center max-w-full sm:max-w-[600px]`}>
                     {gameState.cards.map((card, idx) => (
                       <Card
@@ -332,7 +332,7 @@ const App: React.FC = () => {
               <div className="pt-3 sm:pt-5 border-t border-white/10">
                 <p className="text-[7px] sm:text-[8px] text-gray-500 uppercase font-black mb-2 sm:mb-3 text-center tracking-widest">Difficulty</p>
                 <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/40 rounded-lg sm:rounded-xl">
-                  {([Difficulty.EASY, Difficulty.MEDIUM] as Difficulty[]).map(d => (
+                  {([Difficulty.EASY, Difficulty.NORMAL] as Difficulty[]).map(d => (
                     <button key={d} onClick={() => initGame(d)} className={`py-1.5 sm:py-2 text-[8px] sm:text-[9px] font-black rounded-md sm:rounded-lg transition-all ${gameState.difficulty === d ? 'bg-yellow-400 text-black shadow-md' : 'text-gray-500 hover:text-white'}`}>{d}</button>
                   ))}
                 </div>
@@ -403,12 +403,12 @@ const App: React.FC = () => {
               </button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-white text-gray-800">
-              <div className="mb-6 flex p-1 bg-gray-100 rounded-2xl w-full max-w-sm mx-auto border border-gray-200 shadow-inner">
-                {(['EASY', 'MEDIUM'] as Difficulty[]).map(d => (
+              <div className="mb-6 flex p-1 bg-gray-50 rounded-[1.25rem] w-full max-w-[280px] sm:max-w-sm mx-auto border border-gray-100 shadow-sm relative">
+                {(['EASY', 'NORMAL'] as Difficulty[]).map(d => (
                   <button
                     key={d}
                     onClick={() => setLeaderboardTab(d)}
-                    className={`flex-1 py-2.5 rounded-xl font-fredoka font-bold text-[11px] sm:text-xs tracking-widest transition-all ${leaderboardTab === d ? 'bg-blue-600 text-white shadow-lg' : 'text-gray-400 hover:text-gray-600'}`}
+                    className={`relative z-10 flex-1 py-2 sm:py-2.5 rounded-[0.9rem] font-fredoka font-bold text-[10px] sm:text-xs tracking-widest transition-all duration-300 ${leaderboardTab === d ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-200/50'}`}
                   >
                     {d} MODE
                   </button>

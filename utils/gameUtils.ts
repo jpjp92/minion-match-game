@@ -71,7 +71,7 @@ export const preloadImages = (images: string[]): Promise<void[]> => {
 
 export const createBoard = (difficulty: Difficulty, imagePool: string[]): Card[] => {
   let pairCount = 6;
-  if (difficulty === Difficulty.MEDIUM) pairCount = 8;
+  if (difficulty === Difficulty.NORMAL) pairCount = 8;
 
   const shuffledPool = shuffle([...imagePool]);
   const selectedImages = [];

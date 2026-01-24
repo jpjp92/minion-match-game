@@ -1,7 +1,7 @@
 
 export enum Difficulty {
   EASY = 'EASY',
-  MEDIUM = 'MEDIUM'
+  NORMAL = 'NORMAL'
 }
 
 export interface Card {
