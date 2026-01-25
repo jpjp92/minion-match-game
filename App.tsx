@@ -402,13 +402,13 @@ const App: React.FC = () => {
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-white text-gray-800">
-              <div className="mb-6 flex p-1 bg-gray-50 rounded-[1.25rem] w-full max-w-[280px] sm:max-w-sm mx-auto border border-gray-100 shadow-sm relative">
+            <div className="flex-1 overflow-y-auto px-2 py-4 sm:p-8 bg-white text-gray-800">
+              <div className="mb-4 sm:mb-6 flex p-1 bg-gray-50 rounded-[1.25rem] w-full max-w-[260px] sm:max-w-sm mx-auto border border-gray-100 shadow-sm relative">
                 {(['EASY', 'NORMAL'] as Difficulty[]).map(d => (
                   <button
                     key={d}
                     onClick={() => setLeaderboardTab(d)}
-                    className={`relative z-10 flex-1 py-2 sm:py-2.5 rounded-[0.9rem] font-fredoka font-bold text-[10px] sm:text-xs tracking-widest transition-all duration-300 ${leaderboardTab === d ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-200/50'}`}
+                    className={`relative z-10 flex-1 py-1.5 sm:py-2.5 rounded-[0.9rem] font-fredoka font-bold text-[9px] sm:text-xs tracking-widest transition-all duration-300 ${leaderboardTab === d ? 'bg-blue-600 text-white shadow-md' : 'text-gray-400 hover:bg-gray-200/50'}`}
                   >
                     {d} MODE
                   </button>
@@ -418,11 +418,11 @@ const App: React.FC = () => {
               <div className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm overflow-x-auto">
                 <table className="w-full text-left border-collapse min-w-[320px]">
                   <thead>
-                    <tr className="bg-blue-600 text-white font-black uppercase text-[10px] tracking-widest">
-                      <th className="px-4 py-4 text-center">RANK</th>
-                      <th className="px-4 py-4">PLAYER</th>
-                      <th className="px-4 py-4 text-center">MOVES</th>
-                      <th className="px-4 py-4 text-center">TIME</th>
+                    <tr className="bg-blue-600 text-white font-black uppercase text-[9px] sm:text-[10px] tracking-widest">
+                      <th className="px-2 py-3 sm:px-4 sm:py-4 text-center">RANK</th>
+                      <th className="px-2 py-3 sm:px-4 sm:py-4">PLAYER</th>
+                      <th className="px-2 py-3 sm:px-4 sm:py-4 text-center">MOVES</th>
+                      <th className="px-2 py-3 sm:px-4 sm:py-4 text-center">TIME</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -434,13 +434,13 @@ const App: React.FC = () => {
                         .filter(entry => entry.difficulty === leaderboardTab)
                         .slice(0, 10)
                         .map((entry, index) => (
-                          <tr key={entry.id} className={`${index < 3 ? 'bg-yellow-50/50' : 'bg-white'} hover:bg-gray-50 transition-colors text-sm sm:text-base`}>
-                            <td className="px-4 py-4 text-center font-bold text-blue-600">
+                          <tr key={entry.id} className={`${index < 3 ? 'bg-yellow-50/50' : 'bg-white'} hover:bg-gray-50 transition-colors text-xs sm:text-base`}>
+                            <td className="px-2 py-3 sm:px-4 sm:py-4 text-center font-bold text-blue-600">
                               {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : index + 1}
                             </td>
-                            <td className="px-4 py-4 font-bold text-gray-700 truncate max-w-[100px]">{entry.name}</td>
-                            <td className="px-4 py-4 text-center font-black text-blue-700">{entry.moves}</td>
-                            <td className="px-4 py-4 text-center text-gray-500 text-xs font-semibold">{entry.time}s</td>
+                            <td className="px-2 py-3 sm:px-4 sm:py-4 font-bold text-gray-700 truncate max-w-[80px] sm:max-w-[100px]">{entry.name}</td>
+                            <td className="px-2 py-3 sm:px-4 sm:py-4 text-center font-black text-blue-700">{entry.moves}</td>
+                            <td className="px-2 py-3 sm:px-4 sm:py-4 text-center text-gray-500 text-[10px] sm:text-xs font-semibold">{entry.time}s</td>
                           </tr>
                         )) : (
                         <tr><td colSpan={4} className="py-16 text-center text-gray-400 font-bold text-base uppercase">No {leaderboardTab} records. 🍌</td></tr>
