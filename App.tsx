@@ -37,8 +37,34 @@ const App: React.FC = () => {
       setIsLoadingPool(false);
     };
     loadAssets();
-    const saved = localStorage.getItem('minion_leaderboard');
-    if (saved) setLeaderboard(JSON.parse(saved));
+    
+    const loadScores = async () => {
+      try {
+        const response = await fetch('/api/scores');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        
+        const data: any[] = await response.json();
+        if (data && data.length > 0) {
+          const entries: LeaderboardEntry[] = data.map(row => ({
+            id: row.id.toString(),
+            name: row.player_name,
+            difficulty: row.difficulty as Difficulty,
+            moves: row.moves,
+            time: row.time_taken,
+            date: new Date(row.created_at).toLocaleDateString()
+          }));
+          setLeaderboard(entries);
+          localStorage.setItem('minion_leaderboard', JSON.stringify(entries));
+          return;
+        }
+      } catch (e) {
+        console.warn('Failed to load from API, falling back to local storage', e);
+      }
+      
+      const saved = localStorage.getItem('minion_leaderboard');
+      if (saved) setLeaderboard(JSON.parse(saved));
+    };
+    loadScores();
   }, []);
 
   const startActualGame = useCallback(() => {
@@ -104,8 +130,8 @@ const App: React.FC = () => {
           setTimeout(() => {
             setGameState(current => {
               const matchedCards = [...current.cards];
-              matchedCards[firstIdx].isMatched = true;
-              matchedCards[secondIdx].isMatched = true;
+              matchedCards[firstIdx] = { ...matchedCards[firstIdx], isMatched: true };
+              matchedCards[secondIdx] = { ...matchedCards[secondIdx], isMatched: true };
               const nextMatches = current.matches + 1;
               const totalPairs = current.cards.length / 2;
               const hasWon = nextMatches === totalPairs;
@@ -126,8 +152,8 @@ const App: React.FC = () => {
           setTimeout(() => {
             setGameState(current => {
               const resetCards = [...current.cards];
-              resetCards[firstIdx].isFlipped = false;
-              resetCards[secondIdx].isFlipped = false;
+              resetCards[firstIdx] = { ...resetCards[firstIdx], isFlipped: false };
+              resetCards[secondIdx] = { ...resetCards[secondIdx], isFlipped: false };
               setIsProcessing(false);
               return { ...current, cards: resetCards, flippedIndices: [] };
             });
@@ -156,7 +182,7 @@ const App: React.FC = () => {
     };
   }, []);
 
-  const saveToLeaderboard = useCallback(() => {
+  const saveToLeaderboard = useCallback(async () => {
     if (!playerName.trim()) return;
     const newEntry: LeaderboardEntry = {
       id: Date.now().toString(),
@@ -176,6 +202,24 @@ const App: React.FC = () => {
     setLeaderboardTab(gameState.difficulty); // 방금 플레이한 난이도 탭 활성화
     setGameState(prev => ({ ...prev, status: 'IDLE' }));
     setIsLeaderboardOpen(true);
+    
+    try {
+      const response = await fetch('/api/scores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          player_name: playerName.trim(),
+          difficulty: gameState.difficulty,
+          moves: gameState.moves,
+          time_taken: timer,
+        }),
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      console.log('Score saved to Cloud Leaderboard');
+    } catch (e) {
+      console.error('Failed to save score to cloud (saved locally):', e);
+    }
   }, [playerName, gameState.moves, gameState.difficulty, timer, leaderboard]);
 
   useEffect(() => {
