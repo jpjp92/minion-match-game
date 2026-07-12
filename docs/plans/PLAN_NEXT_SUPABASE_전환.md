@@ -1,7 +1,7 @@
 # Next.js 및 Supabase 전환 계획
 
 작성일: 2026-07-12  
-상태: 계획 수립
+상태: 진행 중 — DB 테이블, RLS 정책, Storage bucket 구성 완료
 
 ## 목표
 
@@ -91,6 +91,8 @@ SUPABASE_SECRET_KEY=
 
 초기 SQL 초안은 `docs/sql/001_auth_profiles_scores.sql`에서 관리한다.
 
+적용 상태: 2026-07-12 Supabase 프로젝트에 적용 및 객체 검증 완료.
+
 ## 이미지 Storage 정책
 
 게임 이미지는 `game-images` private bucket에 저장하는 방향으로 구성한다.
@@ -105,6 +107,8 @@ SUPABASE_SECRET_KEY=
 private bucket은 무단 목록 조회와 영구 public URL 접근을 막지만, 화면에 표시된 이미지는 브라우저 메모리와 네트워크 응답을 통해 사용자가 복사할 수 있다. 따라서 이 구성의 목적은 완전한 복제 방지가 아니라 접근 범위 제한, URL 만료, 원본 목록 비공개화다.
 
 Storage 생성 SQL은 `docs/sql/002_game_images_storage.sql`에서 관리한다.
+
+적용 상태: 2026-07-12 `game-images` private bucket 생성 및 제한 설정 검증 완료.
 
 ## 단계별 실행 계획
 
@@ -122,6 +126,8 @@ Storage 생성 SQL은 `docs/sql/002_game_images_storage.sql`에서 관리한다.
 - 핵심 게임 로직 테스트가 통과한다.
 - 기존 데스크톱·모바일 게임 흐름이 유지된다.
 
+진행 상태: 2026-07-12 완료. 타이머 정리, 점수 중복 제출 방지, 서버 입력 검증, 난이도 설정 분리와 핵심 단위 테스트를 적용했다.
+
 ### 2단계: Next.js App Router 전환
 
 - Next.js, ESLint, Tailwind 빌드 의존성을 구성한다.
@@ -138,6 +144,8 @@ Storage 생성 SQL은 `docs/sql/002_game_images_storage.sql`에서 관리한다.
 - `next dev`에서 전체 게임 흐름이 동작한다.
 - `next build`와 lint가 통과한다.
 - hydration 오류가 발생하지 않는다.
+
+진행 상태: 2026-07-12 완료. Next.js 16 App Router, Tailwind 빌드, Route Handler로 전환했고 production build와 홈/API 런타임 응답을 확인했다.
 
 ### 3단계: Supabase Auth 및 DB 적용
 
@@ -157,6 +165,8 @@ Storage 생성 SQL은 `docs/sql/002_game_images_storage.sql`에서 관리한다.
 - 로그인 사용자는 본인 프로필과 점수를 정상 저장할 수 있다.
 - EASY와 NORMAL 리더보드가 독립적으로 정렬·조회된다.
 - 비로그인 사용자는 private 게임 이미지와 signed URL 발급 API에 접근할 수 없다.
+
+진행 상태: 진행 중. 신규 `game_scores`/`profiles` 조회와 private Storage API 구현, 이미지 26개 업로드를 완료했다. Supabase Dashboard에서 Anonymous Sign-Ins 활성화 후 세션·signed URL·점수 저장 최종 검증이 필요하다.
 
 ### 4단계: 기존 데이터 처리
 

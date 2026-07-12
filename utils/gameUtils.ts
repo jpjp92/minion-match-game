@@ -1,46 +1,17 @@
 
 import { Card, Difficulty } from "../types.ts";
+import { DIFFICULTY_CONFIG } from "../lib/game/config.ts";
 
-/**
- * GitHub API를 사용하여 'minion-match' 저장소의 실제 이미지 파일 목록을 가져옵니다.
- * 더 안정적인 raw.githubusercontent.com 주소로 직접 변환합니다.
- */
 export const fetchAvailableImages = async (): Promise<string[]> => {
-  const REPO_OWNER = 'jpjp92';
-  const REPO_NAME = 'minion-match-game';
-  const PATH = 'public/images';
-
   try {
-    const response = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${PATH}?t=${Date.now()}`);
-
-    if (!response.ok) throw new Error('GitHub API response was not ok');
-
+    const response = await fetch('/api/images', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`Image API returned HTTP ${response.status}`);
     const data = await response.json();
-
-    // 더 안정적인 Raw URL 구조로 직접 생성
-    const imageUrls = data
-      .filter((file: any) =>
-        file.type === 'file' &&
-        /\.(jpe?g|png|webp|gif)$/i.test(file.name)
-      )
-      .map((file: any) => `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/${file.name}`);
-
-    if (imageUrls.length === 0) throw new Error('No images found in the repository');
-
-    return imageUrls;
+    if (!Array.isArray(data.images) || data.images.length === 0) throw new Error('No images returned');
+    return data.images;
   } catch (error) {
-    console.error("Error fetching images from GitHub API:", error);
-    // API 실패 시 폴백 (일부 기본 이미지 경로)
-    return [
-      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/2.jpg`,
-      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/3.jpg`,
-      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/4.jpg`,
-      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/5.jpg`,
-      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/6.jpg`,
-      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/7.jpg`,
-      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/8.jpg`,
-      `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${PATH}/9.jpg`
-    ];
+    console.error('Error fetching images from private Storage:', error);
+    return [];
   }
 };
 
@@ -70,8 +41,7 @@ export const preloadImages = (images: string[]): Promise<void[]> => {
 };
 
 export const createBoard = (difficulty: Difficulty, imagePool: string[]): Card[] => {
-  let pairCount = 6;
-  if (difficulty === Difficulty.NORMAL) pairCount = 8;
+  const pairCount = DIFFICULTY_CONFIG[difficulty].pairCount;
 
   const shuffledPool = shuffle([...imagePool]);
   const selectedImages = [];

@@ -1,8 +1,15 @@
 
+'use client';
+
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Difficulty, GameState, Card as CardType, LeaderboardEntry } from './types.ts';
+import { Difficulty, GameState, LeaderboardEntry } from './types.ts';
 import { createBoard, fetchAvailableImages, preloadImages } from './utils/gameUtils.ts';
 import Card from './components/Card.tsx';
+
+const readBestScore = (difficulty: Difficulty): number => {
+  if (typeof window === 'undefined') return 0;
+  return Number(window.localStorage.getItem(`bestScore_${difficulty}`)) || 0;
+};
 
 const App: React.FC = () => {
   const [imagePool, setImagePool] = useState<string[]>([]);
@@ -17,7 +24,7 @@ const App: React.FC = () => {
     matches: 0,
     status: 'IDLE',
     difficulty: Difficulty.EASY,
-    bestScore: Number(localStorage.getItem(`bestScore_${Difficulty.EASY}`)) || 0,
+    bestScore: readBestScore(Difficulty.EASY),
   });
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -25,9 +32,12 @@ const App: React.FC = () => {
   const [leaderboardTab, setLeaderboardTab] = useState<Difficulty>(Difficulty.EASY);
   const [playerName, setPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [timer, setTimer] = useState(0);
   const timerRef = useRef<number | null>(null);
   const previewIntervalRef = useRef<number | null>(null);
+  const resolutionTimeoutRef = useRef<number | null>(null);
+  const savedScoreKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     const loadAssets = async () => {
@@ -61,25 +71,45 @@ const App: React.FC = () => {
         console.warn('Failed to load from API, falling back to local storage', e);
       }
       
-      const saved = localStorage.getItem('minion_leaderboard');
-      if (saved) setLeaderboard(JSON.parse(saved));
+      try {
+        const saved = localStorage.getItem('minion_leaderboard');
+        if (saved) setLeaderboard(JSON.parse(saved));
+      } catch (e) {
+        console.warn('Failed to parse local leaderboard', e);
+      }
     };
     loadScores();
   }, []);
 
+  const clearGameTimers = useCallback(() => {
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (previewIntervalRef.current !== null) {
+      clearInterval(previewIntervalRef.current);
+      previewIntervalRef.current = null;
+    }
+    if (resolutionTimeoutRef.current !== null) {
+      clearTimeout(resolutionTimeoutRef.current);
+      resolutionTimeoutRef.current = null;
+    }
+  }, []);
+
   const startActualGame = useCallback(() => {
+    clearGameTimers();
     setGameState(prev => ({ ...prev, status: 'PLAYING' }));
     setTimer(0);
-    if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = window.setInterval(() => setTimer(t => t + 1), 1000);
-  }, []);
+  }, [clearGameTimers]);
 
   const initGame = useCallback(async (difficulty: Difficulty = gameState.difficulty) => {
     if (imagePool.length === 0) return;
 
     setIsGameLoading(true);
-    if (timerRef.current) clearInterval(timerRef.current);
-    if (previewIntervalRef.current) clearInterval(previewIntervalRef.current);
+    clearGameTimers();
+    setIsProcessing(false);
+    savedScoreKeyRef.current = null;
 
     const newCards = createBoard(difficulty, imagePool);
     const imageUrls = Array.from(new Set(newCards.map(c => c.image)));
@@ -92,7 +122,7 @@ const App: React.FC = () => {
       matches: 0,
       status: 'PREVIEW',
       difficulty,
-      bestScore: Number(localStorage.getItem(`bestScore_${difficulty}`)) || 0
+      bestScore: readBestScore(difficulty)
     });
 
     setPreviewTimer(5);
@@ -108,7 +138,7 @@ const App: React.FC = () => {
         return t - 1;
       });
     }, 1000);
-  }, [gameState.difficulty, imagePool, startActualGame]);
+  }, [clearGameTimers, gameState.difficulty, imagePool, startActualGame]);
 
   const handleCardClick = useCallback((index: number) => {
     if (isProcessing || gameState.status !== 'PLAYING') return;
@@ -127,7 +157,8 @@ const App: React.FC = () => {
         const nextMoves = prev.moves + 1;
 
         if (isMatch) {
-          setTimeout(() => {
+          resolutionTimeoutRef.current = window.setTimeout(() => {
+            resolutionTimeoutRef.current = null;
             setGameState(current => {
               const matchedCards = [...current.cards];
               matchedCards[firstIdx] = { ...matchedCards[firstIdx], isMatched: true };
@@ -149,7 +180,8 @@ const App: React.FC = () => {
             });
           }, 310);
         } else {
-          setTimeout(() => {
+          resolutionTimeoutRef.current = window.setTimeout(() => {
+            resolutionTimeoutRef.current = null;
             setGameState(current => {
               const resetCards = [...current.cards];
               resetCards[firstIdx] = { ...resetCards[firstIdx], isFlipped: false };
@@ -167,48 +199,49 @@ const App: React.FC = () => {
 
   const updateBestScore = (score: number, difficulty: Difficulty): number => {
     const key = `bestScore_${difficulty}`;
-    const currentBest = Number(localStorage.getItem(key)) || 0;
+    if (typeof window === 'undefined') return score;
+    const currentBest = Number(window.localStorage.getItem(key)) || 0;
     if (score < currentBest || currentBest === 0) {
-      localStorage.setItem(key, score.toString());
+      window.localStorage.setItem(key, score.toString());
       return score;
     }
     return currentBest;
   };
 
   useEffect(() => {
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (previewIntervalRef.current) clearInterval(previewIntervalRef.current);
-    };
-  }, []);
+    return clearGameTimers;
+  }, [clearGameTimers]);
+
+  const backToMenu = useCallback(() => {
+    clearGameTimers();
+    setIsProcessing(false);
+    setGameState(prev => ({ ...prev, status: 'IDLE', flippedIndices: [] }));
+  }, [clearGameTimers]);
 
   const saveToLeaderboard = useCallback(async () => {
-    if (!playerName.trim()) return;
-    const newEntry: LeaderboardEntry = {
+    const normalizedName = playerName.trim();
+    if (!normalizedName || isSaving) return;
+
+    const scoreKey = `${normalizedName}:${gameState.difficulty}:${gameState.moves}:${timer}`;
+    if (savedScoreKeyRef.current === scoreKey) return;
+    savedScoreKeyRef.current = scoreKey;
+    setIsSaving(true);
+
+    let savedEntry: LeaderboardEntry = {
       id: Date.now().toString(),
-      name: playerName.trim(),
+      name: normalizedName,
       moves: gameState.moves,
       time: timer,
       difficulty: gameState.difficulty,
       date: new Date().toLocaleDateString()
     };
-
-    // 전체 기록 업데이트 (정렬은 렌더링 시 처리하거나 저장 시 처리)
-    const updated = [...leaderboard, newEntry]
-      .sort((a, b) => (a.moves !== b.moves ? a.moves - b.moves : a.time - b.time));
-
-    setLeaderboard(updated);
-    localStorage.setItem('minion_leaderboard', JSON.stringify(updated));
-    setLeaderboardTab(gameState.difficulty); // 방금 플레이한 난이도 탭 활성화
-    setGameState(prev => ({ ...prev, status: 'IDLE' }));
-    setIsLeaderboardOpen(true);
     
     try {
       const response = await fetch('/api/scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          player_name: playerName.trim(),
+          player_name: normalizedName,
           difficulty: gameState.difficulty,
           moves: gameState.moves,
           time_taken: timer,
@@ -216,20 +249,41 @@ const App: React.FC = () => {
       });
 
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      console.log('Score saved to Cloud Leaderboard');
+      const row = await response.json();
+      savedEntry = {
+        id: String(row.id),
+        name: row.player_name,
+        difficulty: row.difficulty as Difficulty,
+        moves: row.moves,
+        time: row.time_taken,
+        date: new Date(row.created_at).toLocaleDateString(),
+      };
     } catch (e) {
       console.error('Failed to save score to cloud (saved locally):', e);
+    } finally {
+      setLeaderboard(current => {
+        const updated = [...current, savedEntry]
+          .sort((a, b) => (a.moves !== b.moves ? a.moves - b.moves : a.time - b.time));
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('minion_leaderboard', JSON.stringify(updated));
+        }
+        return updated;
+      });
+      setLeaderboardTab(gameState.difficulty);
+      setGameState(prev => ({ ...prev, status: 'IDLE' }));
+      setIsLeaderboardOpen(true);
+      setIsSaving(false);
     }
-  }, [playerName, gameState.moves, gameState.difficulty, timer, leaderboard]);
+  }, [gameState.difficulty, gameState.moves, isSaving, playerName, timer]);
 
   useEffect(() => {
-    if (gameState.status === 'WON' && playerName.trim()) {
+    if (gameState.status === 'WON' && playerName.trim() && !isSaving) {
       const timeout = setTimeout(() => {
         saveToLeaderboard();
       }, 700); // 0.7초 정도 성공 화면을 보여준 뒤 자동 저장
       return () => clearTimeout(timeout);
     }
-  }, [gameState.status, playerName, saveToLeaderboard]);
+  }, [gameState.status, isSaving, playerName, saveToLeaderboard]);
 
   if (isLoadingPool) {
     return (
@@ -370,7 +424,7 @@ const App: React.FC = () => {
               <div className="flex flex-col gap-2 sm:gap-3">
                 <button onClick={() => initGame(gameState.difficulty)} className="py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-500 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-all active:scale-95 shadow-lg shadow-blue-600/20">Restart Mission</button>
                 <button onClick={() => setIsLeaderboardOpen(true)} className="py-2.5 sm:py-3 bg-yellow-400 hover:bg-yellow-300 text-black rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-all active:scale-95 shadow-lg shadow-yellow-400/10">🏆 Leaderboard</button>
-                <button onClick={() => setGameState(prev => ({ ...prev, status: 'IDLE' }))} className="py-2.5 sm:py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg sm:rounded-xl font-bold text-gray-400 text-[9px] sm:text-[10px] transition-all">Back to Menu</button>
+                <button onClick={backToMenu} className="py-2.5 sm:py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg sm:rounded-xl font-bold text-gray-400 text-[9px] sm:text-[10px] transition-all">Back to Menu</button>
               </div>
 
               <div className="pt-3 sm:pt-5 border-t border-white/10">
@@ -409,10 +463,10 @@ const App: React.FC = () => {
                 />
                 <button
                   onClick={saveToLeaderboard}
-                  disabled={!playerName.trim()}
+                  disabled={!playerName.trim() || isSaving}
                   className="w-full py-4 bg-yellow-400 text-black font-black text-base rounded-xl active:scale-95 transition-all shadow-lg shadow-yellow-400/20 disabled:opacity-50 uppercase"
                 >
-                  SAVE RECORD
+                  {isSaving ? 'SAVING...' : 'SAVE RECORD'}
                 </button>
               </div>
             </div>
