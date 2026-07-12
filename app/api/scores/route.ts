@@ -21,9 +21,9 @@ export async function GET() {
     if (profilesError) throw profilesError;
 
     const names = new Map((profiles ?? []).map(profile => [profile.id, profile.nickname]));
-    return Response.json((scores ?? []).map(score => ({
+    return Response.json((scores ?? []).filter(score => names.has(score.user_id)).map(score => ({
       id: score.id,
-      player_name: names.get(score.user_id) ?? 'Anonymous',
+      player_name: names.get(score.user_id),
       difficulty: score.difficulty,
       moves: score.moves,
       time_taken: score.time_taken,

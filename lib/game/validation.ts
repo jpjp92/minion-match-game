@@ -23,8 +23,12 @@ export const validateScoreInput = (value: unknown): ScoreValidationResult => {
   const input = value as Record<string, unknown>;
   const playerName = normalizePlayerName(input.player_name);
 
-  if (playerName.length < 1 || playerName.length > 12) {
-    return { success: false, error: '플레이어 이름은 1자 이상 12자 이하여야 합니다.' };
+  if (playerName.length < 2 || playerName.length > 12) {
+    return { success: false, error: '플레이어 이름은 2자 이상 12자 이하여야 합니다.' };
+  }
+
+  if (playerName.toLowerCase() === 'anonymous') {
+    return { success: false, error: '사용할 수 없는 플레이어 이름입니다.' };
   }
 
   if (!isDifficulty(input.difficulty)) {
@@ -53,4 +57,3 @@ export const validateScoreInput = (value: unknown): ScoreValidationResult => {
     },
   };
 };
-

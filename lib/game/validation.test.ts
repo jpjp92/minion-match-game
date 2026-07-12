@@ -39,6 +39,7 @@ describe('validateScoreInput', () => {
   it.each([
     [{}, '플레이어 이름'],
     [{ player_name: '1234567890123', difficulty: 'EASY', moves: 6, time_taken: 10 }, '플레이어 이름'],
+    [{ player_name: 'Anonymous', difficulty: 'EASY', moves: 6, time_taken: 10 }, '사용할 수 없는'],
     [{ player_name: 'Bob', difficulty: 'HARD', moves: 6, time_taken: 10 }, '난이도'],
     [{ player_name: 'Bob', difficulty: 'EASY', moves: 1, time_taken: 10 }, '이동 횟수'],
     [{ player_name: 'Bob', difficulty: 'EASY', moves: 6.5, time_taken: 10 }, '이동 횟수'],

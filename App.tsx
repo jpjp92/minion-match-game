@@ -5,6 +5,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Difficulty, GameState, LeaderboardEntry } from './types.ts';
 import { createBoard, fetchAvailableImages, preloadImages } from './utils/gameUtils.ts';
 import Card from './components/Card.tsx';
+import StartScreen from './components/StartScreen.tsx';
+import LeaderboardModal from './components/LeaderboardModal.tsx';
+import ResultModal from './components/ResultModal.tsx';
 
 const readBestScore = (difficulty: Difficulty): number => {
   if (typeof window === 'undefined') return 0;
@@ -33,6 +36,7 @@ const App: React.FC = () => {
   const [playerName, setPlayerName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [timer, setTimer] = useState(0);
   const timerRef = useRef<number | null>(null);
   const previewIntervalRef = useRef<number | null>(null);
@@ -40,6 +44,9 @@ const App: React.FC = () => {
   const savedScoreKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
+    const savedPlayerName = window.localStorage.getItem('minion_player_name');
+    if (savedPlayerName && savedPlayerName.toLowerCase() !== 'anonymous') setPlayerName(savedPlayerName.slice(0, 12));
+
     const loadAssets = async () => {
       setIsLoadingPool(true);
       const images = await fetchAvailableImages();
@@ -54,7 +61,7 @@ const App: React.FC = () => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const data: any[] = await response.json();
-        if (data && data.length > 0) {
+        if (Array.isArray(data)) {
           const entries: LeaderboardEntry[] = data.map(row => ({
             id: row.id.toString(),
             name: row.player_name,
@@ -62,7 +69,7 @@ const App: React.FC = () => {
             moves: row.moves,
             time: row.time_taken,
             date: new Date(row.created_at).toLocaleDateString()
-          }));
+          })).filter(entry => entry.name && entry.name.toLowerCase() !== 'anonymous');
           setLeaderboard(entries);
           localStorage.setItem('minion_leaderboard', JSON.stringify(entries));
           return;
@@ -73,7 +80,10 @@ const App: React.FC = () => {
       
       try {
         const saved = localStorage.getItem('minion_leaderboard');
-        if (saved) setLeaderboard(JSON.parse(saved));
+        if (saved) {
+          const entries = JSON.parse(saved) as LeaderboardEntry[];
+          setLeaderboard(entries.filter(entry => entry.name && entry.name.toLowerCase() !== 'anonymous'));
+        }
       } catch (e) {
         console.warn('Failed to parse local leaderboard', e);
       }
@@ -109,6 +119,7 @@ const App: React.FC = () => {
     setIsGameLoading(true);
     clearGameTimers();
     setIsProcessing(false);
+    setSaveStatus('idle');
     savedScoreKeyRef.current = null;
 
     const newCards = createBoard(difficulty, imagePool);
@@ -139,6 +150,14 @@ const App: React.FC = () => {
       });
     }, 1000);
   }, [clearGameTimers, gameState.difficulty, imagePool, startActualGame]);
+
+  const startFromMenu = useCallback((difficulty: Difficulty) => {
+    const normalizedName = playerName.trim();
+    if (!normalizedName || imagePool.length === 0 || isGameLoading) return;
+    window.localStorage.setItem('minion_player_name', normalizedName);
+    setPlayerName(normalizedName);
+    void initGame(difficulty);
+  }, [imagePool.length, initGame, isGameLoading, playerName]);
 
   const handleCardClick = useCallback((index: number) => {
     if (isProcessing || gameState.status !== 'PLAYING') return;
@@ -215,6 +234,7 @@ const App: React.FC = () => {
   const backToMenu = useCallback(() => {
     clearGameTimers();
     setIsProcessing(false);
+    setSaveStatus('idle');
     setGameState(prev => ({ ...prev, status: 'IDLE', flippedIndices: [] }));
   }, [clearGameTimers]);
 
@@ -226,6 +246,8 @@ const App: React.FC = () => {
     if (savedScoreKeyRef.current === scoreKey) return;
     savedScoreKeyRef.current = scoreKey;
     setIsSaving(true);
+    setSaveStatus('saving');
+    let cloudSaveFailed = false;
 
     let savedEntry: LeaderboardEntry = {
       id: Date.now().toString(),
@@ -259,6 +281,7 @@ const App: React.FC = () => {
         date: new Date(row.created_at).toLocaleDateString(),
       };
     } catch (e) {
+      cloudSaveFailed = true;
       console.error('Failed to save score to cloud (saved locally):', e);
     } finally {
       setLeaderboard(current => {
@@ -270,9 +293,8 @@ const App: React.FC = () => {
         return updated;
       });
       setLeaderboardTab(gameState.difficulty);
-      setGameState(prev => ({ ...prev, status: 'IDLE' }));
-      setIsLeaderboardOpen(true);
       setIsSaving(false);
+      setSaveStatus(cloudSaveFailed ? 'error' : 'saved');
     }
   }, [gameState.difficulty, gameState.moves, isSaving, playerName, timer]);
 
@@ -285,12 +307,38 @@ const App: React.FC = () => {
     }
   }, [gameState.status, isSaving, playerName, saveToLeaderboard]);
 
-  if (isLoadingPool) {
+  useEffect(() => {
+    if (!isLeaderboardOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsLeaderboardOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isLeaderboardOpen]);
+
+  if (gameState.status === 'IDLE') {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#050a0f] text-white">
-        <div className="text-6xl animate-bounce mb-4">🍌</div>
-        <p className="font-fredoka text-xl font-bold text-yellow-400 animate-pulse">Checking Assets...</p>
-      </div>
+      <>
+        <StartScreen
+          playerName={playerName}
+          isReady={!isLoadingPool && !isGameLoading && imagePool.length > 0}
+          onPlayerNameChange={setPlayerName}
+          onStart={startFromMenu}
+          onShowLeaderboard={() => setIsLeaderboardOpen(true)}
+        />
+        {isLeaderboardOpen && (
+          <LeaderboardModal
+            entries={leaderboard}
+            activeTab={leaderboardTab}
+            onTabChange={setLeaderboardTab}
+            onClose={() => setIsLeaderboardOpen(false)}
+          />
+        )}
+      </>
     );
   }
 
@@ -307,8 +355,12 @@ const App: React.FC = () => {
           <div className="text-center sm:text-left">
             <h1 className="text-xl sm:text-4xl font-fredoka font-bold text-yellow-400 leading-none tracking-tight">MINION MATCH</h1>
             <p className="text-blue-300 font-black uppercase text-[7px] sm:text-[10px] tracking-widest mt-0.5 sm:mt-1">
-              {gameState.status === 'PREVIEW' ? 'Memorize Mode' : 'Classic Edition'}
+              {gameState.status === 'PREVIEW' ? 'Memorize Mode' : `${gameState.difficulty} • ${playerName}`}
             </p>
+            <div className="mt-2 flex justify-center gap-2 sm:justify-start">
+              <button type="button" onClick={() => initGame(gameState.difficulty)} className="rounded-lg bg-blue-600/80 px-3 py-1 text-[9px] font-black uppercase text-white transition-colors hover:bg-blue-500">Restart</button>
+              <button type="button" onClick={backToMenu} className="rounded-lg border border-white/10 bg-white/5 px-3 py-1 text-[9px] font-black uppercase text-gray-300 transition-colors hover:bg-white/10">Menu</button>
+            </div>
           </div>
 
           <div className="grid grid-cols-4 gap-1 sm:gap-2 bg-black/40 rounded-xl sm:rounded-2xl p-1 sm:p-1.5 border border-white/10 w-full sm:w-auto">
@@ -330,9 +382,9 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        <div className="flex flex-col lg:grid lg:grid-cols-[1fr_260px] gap-4 sm:gap-6">
-          <section className="order-2 lg:order-1 relative">
-            {gameState.status === 'IDLE' || isGameLoading ? (
+        <div className="w-full">
+          <section className="relative w-full">
+            {isGameLoading ? (
               <div className="min-h-[350px] sm:min-h-[550px] flex flex-col items-center justify-center space-y-4 sm:space-y-6 bg-white/[0.02] rounded-[2rem] sm:rounded-[2.5rem] border-2 border-dashed border-white/10 p-4 sm:p-6">
                 {isGameLoading ? (
                   <>
@@ -384,7 +436,7 @@ const App: React.FC = () => {
 
                 <div className="bg-white/[0.02] p-2 sm:p-6 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-2xl flex items-center justify-center min-h-[350px] sm:min-h-[550px] relative overflow-hidden">
                   {/* 웹에서도 카드가 큼직하게 보이도록 max-w를 상향 조정하고 EASY/NORMAL 너비를 통일하여 카드 크기 일치시킴 */}
-                  <div className={`grid grid-cols-4 gap-2 sm:gap-4 w-full mx-auto justify-items-center max-w-full sm:max-w-[600px]`}>
+                  <div className="mx-auto grid w-full max-w-[760px] grid-cols-4 justify-items-center gap-2 sm:gap-4">
                     {gameState.cards.map((card, idx) => (
                       <Card
                         key={card.id}
@@ -400,94 +452,19 @@ const App: React.FC = () => {
             )}
           </section>
 
-          <aside className="order-1 lg:order-2 flex flex-col gap-3 sm:gap-5">
-            <div className="bg-white/5 backdrop-blur-3xl p-4 sm:p-6 rounded-[1.5rem] sm:rounded-[2rem] border border-white/10 shadow-2xl space-y-3 sm:space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-600 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                </div>
-                <h3 className="font-fredoka text-sm sm:text-base font-bold text-blue-400 uppercase tracking-tight">Mission Panel</h3>
-              </div>
-
-              <div className="bg-black/40 rounded-xl p-2 border border-white/5 space-y-1 mt-1">
-                <p className="text-[7px] text-gray-500 uppercase font-black tracking-widest text-center">Active Agent</p>
-                <input
-                  type="text"
-                  placeholder="Set Name..."
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  maxLength={12}
-                  className="w-full bg-transparent text-center font-bold text-[11px] text-yellow-400 focus:outline-none placeholder:text-gray-700"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 sm:gap-3">
-                <button onClick={() => initGame(gameState.difficulty)} className="py-2.5 sm:py-3 bg-blue-600 hover:bg-blue-500 rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-all active:scale-95 shadow-lg shadow-blue-600/20">Restart Mission</button>
-                <button onClick={() => setIsLeaderboardOpen(true)} className="py-2.5 sm:py-3 bg-yellow-400 hover:bg-yellow-300 text-black rounded-lg sm:rounded-xl font-black text-[10px] sm:text-xs transition-all active:scale-95 shadow-lg shadow-yellow-400/10">🏆 Leaderboard</button>
-                <button onClick={backToMenu} className="py-2.5 sm:py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg sm:rounded-xl font-bold text-gray-400 text-[9px] sm:text-[10px] transition-all">Back to Menu</button>
-              </div>
-
-              <div className="pt-3 sm:pt-5 border-t border-white/10">
-                <p className="text-[7px] sm:text-[8px] text-gray-500 uppercase font-black mb-2 sm:mb-3 text-center tracking-widest">Difficulty</p>
-                <div className="grid grid-cols-2 gap-1.5 p-1 bg-black/40 rounded-lg sm:rounded-xl">
-                  {([Difficulty.EASY, Difficulty.NORMAL] as Difficulty[]).map(d => (
-                    <button key={d} onClick={() => initGame(d)} className={`py-1.5 sm:py-2 text-[8px] sm:text-[9px] font-black rounded-md sm:rounded-lg transition-all ${gameState.difficulty === d ? 'bg-yellow-400 text-black shadow-md' : 'text-gray-500 hover:text-white'}`}>{d}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </aside>
         </div>
       </main>
 
-      {/* WIN MODAL: Only shows when name is NOT set */}
-      {gameState.status === 'WON' && !playerName.trim() && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fadeIn">
-          <div className="bg-yellow-400 p-1 rounded-[2.5rem] shadow-2xl max-w-[340px] w-full animate-scaleIn">
-            <div className="bg-[#050a0f] rounded-[2.35rem] p-8 flex flex-col items-center text-center space-y-6">
-              <span className="text-6xl animate-bounce">🏆</span>
-              <div>
-                <h2 className="text-2xl sm:text-3xl font-fredoka font-bold text-yellow-400 uppercase tracking-tight">Banana Success!</h2>
-                <p className="text-gray-400 text-sm mt-2">Moves: <span className="text-white font-bold">{gameState.moves}</span> | Time: <span className="text-white font-bold">{Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}</span></p>
-              </div>
-              <div className="w-full space-y-3">
-                <input
-                  type="text"
-                  placeholder="Enter Agent Name..."
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') saveToLeaderboard(); }}
-                  maxLength={12}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-yellow-400 transition-colors text-center font-bold text-sm"
-                  autoFocus
-                />
-                <button
-                  onClick={saveToLeaderboard}
-                  disabled={!playerName.trim() || isSaving}
-                  className="w-full py-4 bg-yellow-400 text-black font-black text-base rounded-xl active:scale-95 transition-all shadow-lg shadow-yellow-400/20 disabled:opacity-50 uppercase"
-                >
-                  {isSaving ? 'SAVING...' : 'SAVE RECORD'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* AUTO SAVING OVERLAY: Only shows when name IS ALREADY set */}
-      {gameState.status === 'WON' && playerName.trim() && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#050a0f]/80 backdrop-blur-md animate-fadeIn transition-all">
-          <div className="scale-150 mb-8 animate-bounce">🏆</div>
-          <h2 className="text-4xl sm:text-5xl font-fredoka font-bold text-yellow-400 uppercase tracking-tighter animate-pulse text-center px-4">Mission Accomplished!</h2>
-          <div className="mt-6 flex flex-col items-center gap-2">
-            <p className="text-gray-400 text-sm uppercase tracking-widest font-black">Agent identified</p>
-            <p className="text-white text-3xl font-black">{playerName}</p>
-          </div>
-          <div className="mt-12 flex items-center gap-3">
-            <div className="w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
-            <p className="text-yellow-400/80 font-bold tracking-widest text-[10px] sm:text-xs uppercase">Uploading Record into Hall of Fame...</p>
-          </div>
-        </div>
+      {gameState.status === 'WON' && (
+        <ResultModal
+          moves={gameState.moves}
+          time={timer}
+          playerName={playerName}
+          saveStatus={saveStatus}
+          onPlayAgain={() => void initGame(gameState.difficulty)}
+          onShowLeaderboard={() => setIsLeaderboardOpen(true)}
+          onBackToMenu={backToMenu}
+        />
       )}
 
       {/* LEADERBOARD MODAL */}

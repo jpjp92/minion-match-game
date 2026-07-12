@@ -10,3 +10,4 @@ coverage/
 *.log
 *.tsbuildinfo
 .DS_Store
+scripts/verify-score-flow.mjs

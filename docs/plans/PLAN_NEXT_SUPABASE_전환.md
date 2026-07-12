@@ -166,7 +166,7 @@ Storage 생성 SQL은 `docs/sql/002_game_images_storage.sql`에서 관리한다.
 - EASY와 NORMAL 리더보드가 독립적으로 정렬·조회된다.
 - 비로그인 사용자는 private 게임 이미지와 signed URL 발급 API에 접근할 수 없다.
 
-진행 상태: 진행 중. 신규 `game_scores`/`profiles` 조회와 private Storage API 구현, 이미지 26개 업로드를 완료했다. Supabase Dashboard에서 Anonymous Sign-Ins 활성화 후 세션·signed URL·점수 저장 최종 검증이 필요하다.
+진행 상태: 2026-07-12 완료. Anonymous Sign-Ins, 쿠키 세션, 신규 `game_scores`/`profiles`, private Storage 이미지 26개, signed URL, 점수 저장과 리더보드 반영을 E2E로 검증했다.
 
 ### 4단계: 기존 데이터 처리
 
