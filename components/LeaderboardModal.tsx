@@ -10,7 +10,7 @@ interface LeaderboardModalProps {
 }
 
 const LeaderboardModal = ({ entries, activeTab, onTabChange, onClose }: LeaderboardModalProps) => {
-  const visibleEntries = entries.filter(entry => entry.difficulty === activeTab).slice(0, 10);
+  const visibleEntries = entries.filter(entry => entry.difficulty === activeTab);
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm animate-fadeIn" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
@@ -31,9 +31,9 @@ const LeaderboardModal = ({ entries, activeTab, onTabChange, onClose }: Leaderbo
             ))}
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-gray-100 shadow-sm">
+          <div className="max-h-[420px] overflow-auto rounded-2xl border border-gray-100 shadow-sm" data-testid="leaderboard-scroll-area">
             <table className="w-full min-w-[320px] border-collapse text-left">
-              <thead>
+              <thead className="sticky top-0 z-10">
                 <tr className="bg-blue-600 text-[10px] font-black uppercase tracking-widest text-white">
                   <th className="px-3 py-4 text-center">Rank</th><th className="px-3 py-4">Player</th><th className="px-3 py-4 text-center">Moves</th><th className="px-3 py-4 text-center">Time</th>
                 </tr>

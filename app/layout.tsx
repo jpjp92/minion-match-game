@@ -5,6 +5,11 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Minion Match',
   description: 'A Minion-themed memory matching game',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Minion Match',
+  },
 };
 
 export const viewport: Viewport = {
@@ -12,6 +17,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#101c2b',
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
