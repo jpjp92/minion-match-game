@@ -3,3 +3,4 @@
 .env*.local
 ref/
 node_modules/
+dist/
