@@ -1,10 +1,11 @@
 
 import { Card, Difficulty } from "../types.ts";
 import { DIFFICULTY_CONFIG } from "../lib/game/config.ts";
+import { fetchWithTimeout } from "../lib/http.ts";
 
 export const fetchAvailableImages = async (): Promise<string[]> => {
   try {
-    const response = await fetch('/api/images', { cache: 'no-store' });
+    const response = await fetchWithTimeout('/api/images', { cache: 'no-store' });
     const data = await response.json().catch(() => null);
     if (!response.ok) {
       throw new Error(`Image API returned HTTP ${response.status}${data?.reason ? ` (${data.reason})` : ''}`);

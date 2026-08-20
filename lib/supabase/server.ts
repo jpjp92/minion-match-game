@@ -1,12 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { StageError } from '../apiError.ts';
 
 export async function createSupabaseServerClient() {
   const url = process.env.SUPABASE_URL;
   const publishableKey = process.env.SUPABASE_PUBLISHABLE_KEY;
 
   if (!url || !publishableKey) {
-    throw new Error('Supabase server environment variables are not configured');
+    throw new StageError('supabase_server_env_missing');
   }
 
   const cookieStore = await cookies();

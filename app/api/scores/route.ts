@@ -1,5 +1,6 @@
 import { validateScoreInput } from '../../../lib/game/validation.ts';
 import { createSupabaseServerClient } from '../../../lib/supabase/server.ts';
+import { StageError, reasonOf } from '../../../lib/apiError.ts';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,13 +13,13 @@ export async function GET() {
       .order('moves', { ascending: true })
       .order('time_taken', { ascending: true })
       .limit(100);
-    if (scoresError) throw scoresError;
+    if (scoresError) throw new StageError('scores_query_failed', scoresError);
 
     const userIds = [...new Set((scores ?? []).map(score => score.user_id))];
     const { data: profiles, error: profilesError } = userIds.length > 0
       ? await supabase.from('profiles').select('id, nickname').in('id', userIds)
       : { data: [], error: null };
-    if (profilesError) throw profilesError;
+    if (profilesError) throw new StageError('profiles_query_failed', profilesError);
 
     const names = new Map((profiles ?? []).map(profile => [profile.id, profile.nickname]));
     return Response.json((scores ?? []).filter(score => names.has(score.user_id)).map(score => ({
@@ -31,7 +32,7 @@ export async function GET() {
     })));
   } catch (error) {
     console.error('[GET /api/scores]', error);
-    return Response.json({ error: '리더보드를 불러오지 못했습니다.' }, { status: 500 });
+    return Response.json({ error: '리더보드를 불러오지 못했습니다.', reason: reasonOf(error) }, { status: 500 });
   }
 }
 
@@ -53,13 +54,16 @@ export async function POST(request: Request) {
 
     if (userError || !user) {
       console.error('[POST /api/scores] anonymous auth failed', userError);
-      return Response.json({ error: '사용자 세션을 만들지 못했습니다.' }, { status: 503 });
+      return Response.json(
+        { error: '사용자 세션을 만들지 못했습니다.', reason: 'anonymous_auth_failed' },
+        { status: 503 },
+      );
     }
 
     const { error: profileError } = await supabase
       .from('profiles')
       .upsert({ id: user.id, nickname: validation.data.player_name });
-    if (profileError) throw profileError;
+    if (profileError) throw new StageError('profile_upsert_failed', profileError);
 
     const { data, error } = await supabase
       .from('game_scores')
@@ -71,13 +75,13 @@ export async function POST(request: Request) {
       })
       .select('id, difficulty, moves, time_taken, created_at')
       .single();
-    if (error) throw error;
+    if (error) throw new StageError('score_insert_failed', error);
     return Response.json({
       ...data,
       player_name: validation.data.player_name,
     }, { status: 201 });
   } catch (error) {
     console.error('[POST /api/scores]', error);
-    return Response.json({ error: '점수를 저장하지 못했습니다.' }, { status: 500 });
+    return Response.json({ error: '점수를 저장하지 못했습니다.', reason: reasonOf(error) }, { status: 500 });
   }
 }

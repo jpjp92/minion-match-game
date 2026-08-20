@@ -19,6 +19,8 @@ const ResultModal = ({
   onShowLeaderboard,
   onBackToMenu,
 }: ResultModalProps) => {
+  // 저장은 백그라운드에서 진행한다. 저장 상태로 버튼을 막으면 응답이 늦거나 실패할 때
+  // 모달 전체가 무한 로딩처럼 잠기기 때문에 이동은 항상 허용한다.
   const isSaving = saveStatus === 'saving';
 
   return (
@@ -42,9 +44,9 @@ const ResultModal = ({
         </p>
 
         <div className="flex flex-col gap-3">
-          <button type="button" onClick={onPlayAgain} disabled={isSaving} className="w-full rounded-xl bg-[#152844] py-3.5 font-black text-white shadow-lg transition-all hover:bg-blue-700 disabled:cursor-wait disabled:opacity-60">Play Again</button>
-          <button type="button" onClick={onShowLeaderboard} disabled={isSaving} className="w-full rounded-xl bg-yellow-400 py-3.5 font-black text-[#152844] shadow-md transition-all hover:bg-yellow-300 disabled:cursor-wait disabled:opacity-60">🏆 Hall of Fame</button>
-          <button type="button" onClick={onBackToMenu} disabled={isSaving} className="w-full rounded-xl border border-stone-200 bg-transparent py-3.5 font-black text-stone-500 transition-all hover:bg-stone-100 disabled:cursor-wait disabled:opacity-60">Back to Menu</button>
+          <button type="button" onClick={onPlayAgain} className="w-full rounded-xl bg-[#152844] py-3.5 font-black text-white shadow-lg transition-all hover:bg-blue-700">Play Again</button>
+          <button type="button" onClick={onShowLeaderboard} className="w-full rounded-xl bg-yellow-400 py-3.5 font-black text-[#152844] shadow-md transition-all hover:bg-yellow-300">🏆 Hall of Fame</button>
+          <button type="button" onClick={onBackToMenu} className="w-full rounded-xl border border-stone-200 bg-transparent py-3.5 font-black text-stone-500 transition-all hover:bg-stone-100">Back to Menu</button>
         </div>
       </div>
     </div>

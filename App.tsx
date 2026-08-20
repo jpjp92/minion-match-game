@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Difficulty, GameState, LeaderboardEntry } from './types.ts';
 import { createBoard, fetchAvailableImages, preloadImages } from './utils/gameUtils.ts';
+import { fetchWithTimeout } from './lib/http.ts';
 import Card from './components/Card.tsx';
 import StartScreen from './components/StartScreen.tsx';
 import LeaderboardModal from './components/LeaderboardModal.tsx';
@@ -64,7 +65,7 @@ const App: React.FC = () => {
     
     const loadScores = async () => {
       try {
-        const response = await fetch('/api/scores');
+        const response = await fetchWithTimeout('/api/scores');
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         
         const data: any[] = await response.json();
@@ -266,7 +267,7 @@ const App: React.FC = () => {
     };
     
     try {
-      const response = await fetch('/api/scores', {
+      const response = await fetchWithTimeout('/api/scores', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -277,7 +278,10 @@ const App: React.FC = () => {
         }),
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(`HTTP ${response.status}${body?.reason ? ` (${body.reason})` : ''}${body?.error ? `: ${body.error}` : ''}`);
+      }
       const row = await response.json();
       savedEntry = {
         id: String(row.id),
@@ -301,7 +305,10 @@ const App: React.FC = () => {
       });
       setLeaderboardTab(gameState.difficulty);
       setIsSaving(false);
-      setSaveStatus(cloudSaveFailed ? 'error' : 'saved');
+      // 저장 중에 Play Again 등으로 이동했다면 지난 판의 결과 문구를 덮어쓰지 않는다.
+      if (savedScoreKeyRef.current === scoreKey) {
+        setSaveStatus(cloudSaveFailed ? 'error' : 'saved');
+      }
     }
   }, [gameState.difficulty, gameState.moves, isSaving, playerName, timer]);
 
