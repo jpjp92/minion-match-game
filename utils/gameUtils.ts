@@ -5,12 +5,17 @@ import { DIFFICULTY_CONFIG } from "../lib/game/config.ts";
 export const fetchAvailableImages = async (): Promise<string[]> => {
   try {
     const response = await fetch('/api/images', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`Image API returned HTTP ${response.status}`);
-    const data = await response.json();
-    if (!Array.isArray(data.images) || data.images.length === 0) throw new Error('No images returned');
+    const data = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(`Image API returned HTTP ${response.status}${data?.reason ? ` (${data.reason})` : ''}`);
+    }
+    if (!Array.isArray(data?.images) || data.images.length === 0) throw new Error('No images returned');
+    if (data.source === 'local') {
+      console.warn(`Using local fallback images: ${data.reason ?? 'unknown reason'}`);
+    }
     return data.images;
   } catch (error) {
-    console.error('Error fetching images from private Storage:', error);
+    console.error('Error fetching game images:', error);
     return [];
   }
 };

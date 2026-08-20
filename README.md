@@ -60,7 +60,7 @@ Supabase 테이블과 Storage가 아직 준비되지 않았다면 [Supabase 초�
 npm run dev
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)을 엽니다. Storage에 게임 이미지가 없거나 `/api/images`가 실패하면 게임 시작 버튼이 활성화되지 않습니다.
+브라우저에서 [http://localhost:3000](http://localhost:3000)을 엽니다. Storage에 게임 이미지가 없거나 Storage 조회가 실패하면 `/api/images`가 `public/images`의 로컬 이미지로 폴백하므로 게임은 그대로 시작할 수 있습니다(응답의 `source`가 `local`, `reason`에 원인이 담깁니다).
 
 ## 게임 방식
 
@@ -90,7 +90,7 @@ npm run dev
 ```text
 Browser
   ├─ GET /api/images
-  │    └─ Anonymous Auth 확인 → private Storage 조회 → signed URL 반환
+  │    └─ private Storage 조회 → signed URL 반환 (실패 시 로컬 이미지 폴백)
   └─ GET/POST /api/scores
        └─ Anonymous Auth 확인 → profiles/game_scores 조회 및 저장
 ```
@@ -99,7 +99,7 @@ Browser
 
 | Method | Endpoint | 설명 |
 |---|---|---|
-| `GET` | `/api/images` | `game-images` bucket의 이미지 signed URL 목록 반환 |
+| `GET` | `/api/images` | `game-images` bucket의 이미지 signed URL 목록 반환. Storage 조회 실패·빈 bucket이면 `public/images` 폴백 목록 반환 |
 | `GET` | `/api/scores` | 이동 횟수·플레이 시간순 상위 100건 반환 |
 | `POST` | `/api/scores` | 닉네임과 점수를 검증한 뒤 프로필·기록 저장 |
 
@@ -107,7 +107,7 @@ Browser
 
 ```text
 app/
-  api/images/route.ts       # private Storage 이미지 URL 발급
+  api/images/route.ts       # private Storage 이미지 URL 발급 (실패 시 로컬 폴백)
   api/scores/route.ts       # 리더보드 조회·점수 저장
   globals.css               # 전역 스타일
   layout.tsx                # 메타데이터와 viewport

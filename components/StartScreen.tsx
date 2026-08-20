@@ -6,17 +6,22 @@ import { Difficulty } from '../types.ts';
 interface StartScreenProps {
   playerName: string;
   isReady: boolean;
+  /** 이미지 로딩이 실패한 경우의 안내 문구. null이면 정상 로딩 중이거나 완료된 상태다. */
+  loadError?: string | null;
   onPlayerNameChange: (name: string) => void;
   onStart: (difficulty: Difficulty) => void;
   onShowLeaderboard: () => void;
+  onRetryLoad?: () => void;
 }
 
 const StartScreen = ({
   playerName,
   isReady,
+  loadError = null,
   onPlayerNameChange,
   onStart,
   onShowLeaderboard,
+  onRetryLoad,
 }: StartScreenProps) => {
   const [error, setError] = useState('');
 
@@ -77,7 +82,21 @@ const StartScreen = ({
           />
           <div className="min-h-7 pt-2 text-center">
             {error && <p id="player-name-error" role="alert" className="text-sm font-bold text-red-500">{error}</p>}
-            {!error && !isReady && <p className="text-sm font-bold text-stone-400">Preparing Minions...</p>}
+            {!error && !isReady && !loadError && <p className="text-sm font-bold text-stone-400">Preparing Minions...</p>}
+            {!error && loadError && (
+              <p role="alert" className="text-sm font-bold text-red-500">
+                {loadError}
+                {onRetryLoad && (
+                  <button
+                    type="button"
+                    onClick={onRetryLoad}
+                    className="ml-2 rounded-full bg-[#152844] px-3 py-1 text-xs font-black text-white transition-colors hover:bg-slate-800"
+                  >
+                    다시 시도
+                  </button>
+                )}
+              </p>
+            )}
           </div>
 
           <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2">
