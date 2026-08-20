@@ -1,0 +1,31 @@
+// public/images 디렉터리와 짝을 맞춘 폴백 목록.
+// Supabase Storage(비공개 버킷) 조회가 실패하거나 비어 있을 때만 사용한다.
+// public/ 은 서버리스 번들에 포함되지 않으므로 런타임에 파일 시스템을 읽지 않고 상수로 관리한다.
+export const LOCAL_FALLBACK_IMAGES: string[] = [
+  '/images/2.jpg',
+  '/images/3.jpg',
+  '/images/4.jpg',
+  '/images/5.jpg',
+  '/images/6.jpg',
+  '/images/7.jpg',
+  '/images/8.jpg',
+  '/images/9.jpg',
+  '/images/10.jpg',
+  '/images/11.jpg',
+  '/images/12.jpg',
+  '/images/14.jpg',
+  '/images/15.jpg',
+  '/images/16.jpg',
+  '/images/17.jpg',
+  '/images/18.jpg',
+  '/images/20.jpg',
+  '/images/21.jpg',
+  '/images/22.jpg',
+  '/images/23.jpg',
+  '/images/25.jpg',
+  '/images/26.jpg',
+  '/images/27.jpg',
+  '/images/28.jpg',
+  '/images/29.jpg',
+  '/images/30.jpg',
+];

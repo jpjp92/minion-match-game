@@ -20,6 +20,7 @@ const readBestScore = (difficulty: Difficulty): number => {
 const App: React.FC = () => {
   const [imagePool, setImagePool] = useState<string[]>([]);
   const [isLoadingPool, setIsLoadingPool] = useState(true);
+  const [poolError, setPoolError] = useState<string | null>(null);
   const [isGameLoading, setIsGameLoading] = useState(false);
   const [previewTimer, setPreviewTimer] = useState(5);
 
@@ -46,17 +47,20 @@ const App: React.FC = () => {
   const resolutionTimeoutRef = useRef<number | null>(null);
   const savedScoreKeyRef = useRef<string | null>(null);
 
+  const loadAssets = useCallback(async () => {
+    setIsLoadingPool(true);
+    setPoolError(null);
+    const images = await fetchAvailableImages();
+    setImagePool(images);
+    setPoolError(images.length === 0 ? '게임 이미지를 불러오지 못했습니다. 다시 시도해 주세요.' : null);
+    setIsLoadingPool(false);
+  }, []);
+
   useEffect(() => {
     const savedPlayerName = window.localStorage.getItem('minion_player_name');
     if (savedPlayerName && savedPlayerName.toLowerCase() !== 'anonymous') setPlayerName(savedPlayerName.slice(0, 12));
 
-    const loadAssets = async () => {
-      setIsLoadingPool(true);
-      const images = await fetchAvailableImages();
-      setImagePool(images);
-      setIsLoadingPool(false);
-    };
-    loadAssets();
+    void loadAssets();
     
     const loadScores = async () => {
       try {
@@ -92,7 +96,7 @@ const App: React.FC = () => {
       }
     };
     loadScores();
-  }, []);
+  }, [loadAssets]);
 
   const clearGameTimers = useCallback(() => {
     if (timerRef.current !== null) {
@@ -329,6 +333,8 @@ const App: React.FC = () => {
         <StartScreen
           playerName={playerName}
           isReady={!isLoadingPool && !isGameLoading && imagePool.length > 0}
+          loadError={isLoadingPool ? null : poolError}
+          onRetryLoad={() => void loadAssets()}
           onPlayerNameChange={setPlayerName}
           onStart={startFromMenu}
           onShowLeaderboard={() => setIsLeaderboardOpen(true)}

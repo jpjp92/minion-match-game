@@ -53,6 +53,16 @@ describe('StartScreen', () => {
     expect(screen.getByText('Preparing Minions...').textContent).toBe('Preparing Minions...');
   });
 
+  it('surfaces an image loading failure with a retry action instead of waiting forever', async () => {
+    const user = userEvent.setup();
+    const onRetryLoad = vi.fn();
+    setup({ isReady: false, loadError: '게임 이미지를 불러오지 못했습니다. 다시 시도해 주세요.', onRetryLoad });
+    expect(screen.queryByText('Preparing Minions...')).toBeNull();
+    expect(screen.getByRole('alert').textContent).toContain('게임 이미지를 불러오지 못했습니다.');
+    await user.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(onRetryLoad).toHaveBeenCalledOnce();
+  });
+
   it('opens the hall of fame independently from game entry', async () => {
     const user = userEvent.setup();
     const props = setup();
