@@ -1,5 +1,6 @@
 import { createSupabaseAdminClient } from '../../../lib/supabase/admin.ts';
 import { LOCAL_FALLBACK_IMAGES } from '../../../lib/game/localImages.ts';
+import { StageError } from '../../../lib/apiError.ts';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,8 +19,8 @@ const respond = (images: string[], source: ImageSource, reason?: string) =>
   );
 
 /** Storage 조회가 실패하거나 비어 있어도 게임은 시작할 수 있어야 하므로 로컬 이미지로 폴백한다. */
-const respondWithFallback = (reason: string) => {
-  console.error(`[GET /api/images] falling back to local images (${reason})`);
+const respondWithFallback = (reason: string, cause?: unknown) => {
+  console.error(`[GET /api/images] falling back to local images (${reason})`, cause ?? '');
   if (LOCAL_FALLBACK_IMAGES.length === 0) {
     return Response.json(
       { error: '사용 가능한 게임 이미지가 없습니다.', reason },
@@ -40,7 +41,7 @@ const listImagePaths = async (storage: Storage): Promise<string[]> => {
       offset: page * LIST_PAGE_SIZE,
       sortBy: { column: 'name', order: 'asc' },
     });
-    if (error) throw error;
+    if (error) throw new StageError('storage_list_failed', error);
 
     const names = objects ?? [];
     paths.push(...names.filter(object => IMAGE_NAME_PATTERN.test(object.name)).map(object => object.name));
@@ -62,7 +63,7 @@ export async function GET() {
     }
 
     const { data: signedObjects, error: signError } = await storage.createSignedUrls(paths, SIGNED_URL_TTL_SECONDS);
-    if (signError) throw signError;
+    if (signError) throw new StageError('signed_url_failed', signError);
 
     const images = (signedObjects ?? []).map(object => object.signedUrl).filter(Boolean);
     if (images.length === 0) {
@@ -71,8 +72,6 @@ export async function GET() {
 
     return respond(images, 'storage');
   } catch (error) {
-    console.error('[GET /api/images]', error);
-    const reason = error instanceof Error ? `storage_error: ${error.message}` : 'storage_error';
-    return respondWithFallback(reason);
+    return respondWithFallback(error instanceof StageError ? error.reason : 'storage_error', error);
   }
 }

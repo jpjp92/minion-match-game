@@ -38,11 +38,22 @@ describe('ResultModal', () => {
     expect(callbacks.onBackToMenu).toHaveBeenCalledOnce();
   });
 
-  it('blocks navigation while the score is saving', () => {
-    setup('saving');
+  it('keeps navigation available while the score is still saving', async () => {
+    const user = userEvent.setup();
+    const callbacks = setup('saving');
     for (const button of screen.getAllByRole('button')) {
-      expect((button as HTMLButtonElement).disabled).toBe(true);
+      expect((button as HTMLButtonElement).disabled).toBe(false);
     }
     expect(screen.getByText('Saving your record...').textContent).toBe('Saving your record...');
+    await user.click(screen.getByRole('button', { name: 'Play Again' }));
+    expect(callbacks.onPlayAgain).toHaveBeenCalledOnce();
+  });
+
+  it('reports a failed cloud save without blocking the next game', () => {
+    setup('error');
+    expect(screen.getByText('Cloud save failed. Record kept locally.')).toBeTruthy();
+    for (const button of screen.getAllByRole('button')) {
+      expect((button as HTMLButtonElement).disabled).toBe(false);
+    }
   });
 });
