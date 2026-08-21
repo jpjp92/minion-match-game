@@ -14,6 +14,7 @@
 - [Supabase 초기 설정](#supabase-초기-설정)
 - [개발 및 검증](#개발-및-검증)
 - [배포](#배포)
+- [문제 해결](#문제-해결)
 
 ## 주요 기능
 
@@ -174,6 +175,7 @@ node scripts/upload-game-images.mjs
 | `npm run typecheck` | TypeScript 정적 검사 |
 | `npm run build` | 프로덕션 빌드 생성 |
 | `npm start` | 생성된 프로덕션 빌드 실행 |
+| `npm run check:supabase` | Supabase 연결·익명 로그인·RLS·Storage 단계별 점검 |
 
 변경 후에는 다음 순서로 검증하는 것을 권장합니다.
 
@@ -193,9 +195,33 @@ Vercel 프로젝트의 **Settings → Environment Variables**에 아래 변수�
 
 Production, Preview, Development 중 필요한 환경에 각각 적용하고, secret key가 빌드 로그나 클라이언트 코드에 포함되지 않았는지 확인합니다.
 
+## 문제 해결
+
+API가 실패하면 응답 JSON의 `reason` 코드로 실패 단계를 알 수 있습니다. 상세 원인은 서버 로그(Vercel → Functions)에만 기록됩니다.
+
+| `reason` | 의미 | 확인할 곳 |
+|---|---|---|
+| `supabase_admin_env_missing` | `SUPABASE_URL` 또는 `SUPABASE_SECRET_KEY` 미설정 | 배포 환경변수 |
+| `supabase_server_env_missing` | `SUPABASE_URL` 또는 `SUPABASE_PUBLISHABLE_KEY` 미설정 | 배포 환경변수 |
+| `storage_list_failed` | `game-images` bucket 조회 실패 | bucket 존재 여부, secret key 유효성, 프로젝트 일시 정지 여부 |
+| `storage_bucket_empty` | bucket에 이미지 없음 | `node scripts/upload-game-images.mjs` 실행 |
+| `signed_url_failed` / `signed_url_empty` | signed URL 발급 실패 | bucket 권한, 파일 경로 |
+| `anonymous_auth_failed` | 익명 로그인 실패 | **Authentication → Providers → Anonymous** 활성화, 익명 로그인 rate limit, 키 유효성 |
+| `profile_upsert_failed` / `score_insert_failed` | 저장 시 RLS·제약 위반 | `001_auth_profiles_scores.sql` 적용 여부 |
+| `scores_query_failed` / `profiles_query_failed` | 리더보드 조회 실패 | 테이블 존재 여부, select 정책 |
+
+`/api/images`는 Storage 조회가 실패해도 `public/images` 폴백으로 200을 반환하므로 게임 진행은 막히지 않고, 점수 저장이 실패해도 기록은 브라우저 localStorage에 남습니다.
+
+세 경로가 동시에 실패하면 프로젝트 일시 정지, `SUPABASE_URL` 오타, 키 불일치처럼 원인이 하나인 경우가 많습니다. 다음 명령으로 단계별 실제 응답을 확인할 수 있습니다.
+
+```bash
+npm run check:supabase
+```
+
 ## 문서
 
 - [문서 관리 규칙](docs/README.md)
 - [Next.js·Supabase 전환 계획](docs/plans/PLAN_NEXT_SUPABASE_전환.md)
 - [UI 리디자인 계획](docs/plans/PLAN_UI_리디자인.md)
 - [2026-07-12 개발 로그](docs/logs/DEV_20260712.md)
+- [2026-08-20 개발 로그](docs/logs/DEV_20260820.md)

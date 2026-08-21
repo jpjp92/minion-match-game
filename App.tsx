@@ -66,8 +66,11 @@ const App: React.FC = () => {
     const loadScores = async () => {
       try {
         const response = await fetchWithTimeout('/api/scores');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          throw new Error(`HTTP ${response.status}${body?.reason ? ` (${body.reason})` : ''}`);
+        }
+
         const data: any[] = await response.json();
         if (Array.isArray(data)) {
           const entries: LeaderboardEntry[] = data.map(row => ({

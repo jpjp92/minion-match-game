@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:supabase": "node scripts/check-supabase.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
