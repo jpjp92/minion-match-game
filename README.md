@@ -212,7 +212,9 @@ API가 실패하면 응답 JSON의 `reason` 코드로 실패 단계를 알 수 �
 
 `/api/images`는 Storage 조회가 실패해도 `public/images` 폴백으로 200을 반환하므로 게임 진행은 막히지 않고, 점수 저장이 실패해도 기록은 브라우저 localStorage에 남습니다.
 
-세 경로가 동시에 실패하면 프로젝트 일시 정지, `SUPABASE_URL` 오타, 키 불일치처럼 원인이 하나인 경우가 많습니다. 다음 명령으로 단계별 실제 응답을 확인할 수 있습니다.
+세 경로가 동시에 실패하면 프로젝트 일시 정지, `SUPABASE_URL` 오타, 키 불일치처럼 원인이 하나인 경우가 많습니다.
+특히 무료 플랜 프로젝트는 장기 미사용 시 자동으로 일시 정지되며, 이 경우 Storage·Auth·PostgREST가 함께 응답하지 않습니다.
+Supabase Dashboard에서 프로젝트를 재개하면 복구됩니다. 다음 명령으로 단계별 실제 응답을 확인할 수 있습니다.
 
 ```bash
 npm run check:supabase
